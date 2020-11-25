@@ -183,8 +183,8 @@ def get_metrics(sample_mu, labels, predict_start, samples=None, relative=False):
     metric['ND'] = net.accuracy_ND_(sample_mu, labels[:, predict_start:], relative=relative)
     metric['RMSE'] = net.accuracy_RMSE_(sample_mu, labels[:, predict_start:], relative=relative)
     if samples is not None:
-        metric['rou90'] = net.accuracy_ROU_(0.9, samples, labels[:, predict_start:])
-        metric['rou50'] = net.accuracy_ROU_(0.5, samples, labels[:, predict_start:])
+        metric['rou90'] = net.accuracy_ROU_(0.9, samples, labels[:, predict_start:],relative=True)
+        metric['rou50'] = net.accuracy_ROU_(0.5, samples, labels[:, predict_start:],relative=True)
     return metric
 
 def update_metrics(raw_metrics, input_mu, input_sigma, sample_mu, labels, predict_start, samples=None, relative=False):
@@ -194,8 +194,8 @@ def update_metrics(raw_metrics, input_mu, input_sigma, sample_mu, labels, predic
     raw_metrics['test_loss'] = raw_metrics['test_loss'] + [
         net.loss_fn(input_mu, input_sigma, labels[:, :predict_start]) * input_time_steps, input_time_steps]
     if samples is not None:
-        raw_metrics['rou90'] = raw_metrics['rou90'] + net.accuracy_ROU(0.9, samples, labels[:, predict_start:])
-        raw_metrics['rou50'] = raw_metrics['rou50'] + net.accuracy_ROU(0.5, samples, labels[:, predict_start:])
+        raw_metrics['rou90'] = raw_metrics['rou90'] + net.accuracy_ROU(0.9, samples, labels[:, predict_start:], relative=True)
+        raw_metrics['rou50'] = raw_metrics['rou50'] + net.accuracy_ROU(0.5, samples, labels[:, predict_start:], relative=True)
         raw_metrics['crps'] = raw_metrics['crps'] + net.accuracy_CRPS(samples, labels[:, predict_start:])
         raw_metrics['rc'] = raw_metrics['rc'] + net.accuracy_RC(samples, labels[:, predict_start:])
         raw_metrics['sharp'] = raw_metrics['sharp'] + net.accuracy_SHA(samples)

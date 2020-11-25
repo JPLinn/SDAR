@@ -17109,3 +17109,60 @@ rc: [0.04120486 0.04241158 0.04296853 0.04751694]
 [20:17:51] DeepAR.Train: - Found new best ND
 [20:17:51] DeepAR.Train: Current Best ND is: inf
 [20:17:51] DeepAR.Train: Epoch 8/40
+[14:57:42] DeepAR.Train: Loading the datasets...
+[14:57:42] DeepAR.Data: train_len: 2877
+[14:57:42] DeepAR.Data: building datasets from data\Zone1...
+[14:57:42] DeepAR.Data: test_len: 1197
+[14:57:42] DeepAR.Data: building datasets from data\Zone1...
+[14:57:42] DeepAR.Train: Loading complete.
+[14:57:42] DeepAR.Train: Model: 
+Net(
+  (embedding): Embedding(1, 20)
+  (lstm): LSTM(27, 40, num_layers=3, dropout=0.1)
+  (relu): ReLU()
+  (distribution_mu): Linear(in_features=120, out_features=1, bias=True)
+  (distribution_pre_sigma): Linear(in_features=120, out_features=1, bias=True)
+  (distribution_sigma): Softplus(beta=1, threshold=20)
+)
+[14:57:42] DeepAR.Train: Starting training for 40 epoch(s)
+[14:57:42] DeepAR.Train: begin training and evaluation
+[14:57:42] DeepAR.Train: Epoch 1/40
+[14:58:32] DeepAR.Eval: - Full test metrics: 
+CRPS: [0.15908319 0.15929157 0.15991219 0.15971109]
+RMSE: [0.2589594  0.25924981 0.26033073 0.25993117]
+rou90: 0.1984761456347789
+rou50: 0.5603869456859697
+sharp90: [0.24930788 0.24958593 0.24985279 0.2498545 ]
+sharp50: [0.59941482 0.59891001 0.59795641 0.59972181]
+rc: [0.21224357 0.21140815 0.21187227 0.2115938 ]
+[14:58:32] DeepAR.Utils: Checkpoint saved to experiments\base_model\epoch_0.pth.tar
+[14:58:32] DeepAR.Utils: Best checkpoint copied to best.pth.tar
+[14:58:32] DeepAR.Train: - Found new best ND
+[14:58:32] DeepAR.Train: Current Best ND is: inf
+[14:58:32] DeepAR.Train: Epoch 2/40
+[14:59:19] DeepAR.Eval: - Full test metrics: 
+CRPS: [0.15009739 0.1510028  0.15131451 0.15243061]
+RMSE: [0.2581904  0.25902031 0.25954089 0.2612021 ]
+rou90: 0.24141733610988017
+rou50: 0.5327733142275052
+sharp90: [0.36352486 0.36402076 0.36288813 0.36277674]
+sharp50: [0.86552142 0.87165856 0.86821055 0.87352775]
+rc: [0.02204586 0.02761533 0.02457069 0.03060429]
+[14:59:19] DeepAR.Utils: Checkpoint saved to experiments\base_model\epoch_1.pth.tar
+[14:59:19] DeepAR.Utils: Best checkpoint copied to best.pth.tar
+[14:59:19] DeepAR.Train: - Found new best ND
+[14:59:19] DeepAR.Train: Current Best ND is: inf
+[14:59:19] DeepAR.Train: Epoch 3/40
+[15:00:06] DeepAR.Eval: - Full test metrics: 
+CRPS: [0.11154882 0.11289834 0.11375276 0.11370501]
+RMSE: [0.19252147 0.19475474 0.19611984 0.19596595]
+rou90: 0.1538810346174554
+rou50: 0.4119079008922657
+sharp90: [0.28412693 0.28416043 0.28442448 0.28260617]
+sharp50: [0.67869925 0.67980397 0.68170751 0.67814699]
+rc: [0.05501717 0.05121136 0.05696649 0.05770909]
+[15:00:06] DeepAR.Utils: Checkpoint saved to experiments\base_model\epoch_2.pth.tar
+[15:00:06] DeepAR.Utils: Best checkpoint copied to best.pth.tar
+[15:00:06] DeepAR.Train: - Found new best ND
+[15:00:06] DeepAR.Train: Current Best ND is: inf
+[15:00:06] DeepAR.Train: Epoch 4/40

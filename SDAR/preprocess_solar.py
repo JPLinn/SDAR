@@ -174,7 +174,7 @@ if __name__ == '__main__':
     num_covariates = 5
     train_start = '2012-04-01 01:00:00'
     train_end = '2013-04-01 00:00:00'
-    test_start = '2013-01-27 01:00:00'  # need additional 5 days as given info
+    test_start = '2013-03-27 01:00:00'  # need additional 5 days as given info
     test_end = '2013-07-01 00:00:00'
     pred_days = 5
     given_days = 5
@@ -186,7 +186,7 @@ if __name__ == '__main__':
     data_frame = pd.read_csv(csv_path, sep=",", index_col=0, parse_dates=True)
     data_frame.fillna(0, inplace=True)
 
-    fit = calResi(data_frame,np.array((1,2,364,365,366,729,730,731)))
+    fit = calResi(data_frame,np.array((1,365,730)))
 
     data_frame['power'] = data_frame['power'] - fit
     df = data_frame[data_frame.index.hour < 8]

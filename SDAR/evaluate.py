@@ -24,7 +24,7 @@ parser.add_argument('--restore-file', default='epoch_18',
                     training')  # 'best' or 'epoch_#'
 
 
-def evaluate(model, loss_fn, test_loader, params, plot_num, sample=True):
+def evaluate(model, loss_fn, test_loader, params, plot_num = 5, sample=True):
     '''Evaluate the model on the test set.
     Args:
         model: (torch.nn.Module) the Deep AR model

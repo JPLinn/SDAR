@@ -28,6 +28,16 @@ parser.add_argument('--restore-file', default=None,
                     training')  # 'best' or 'epoch_#'
 parser.add_argument('--mixing', default=False, help='Whether to train all the stations together')
 
+def stabilityTest(model: nn.Module, loss_fn, test_loader: Dataloader, params: utils.Params, epoch: int, num=10):
+    load_checkpoint('experiments/base_model/epoch_' + str(epoch) + '.pth.tar', model)
+    logger.info('Epochs run out! Now start testing how stable the best epoch is !')
+    crps_results = np.zeros(num)
+    for k in range(num):
+        logger.info('Experiment %d'%(k+1))
+        results = evaluate(model, loss_fn, test_loader, params)
+        crps_results[k] = results['crps']
+    logger.info('The MEAN of CRPS is: %.4f\nThe STDERR of CRPS is: %.4f'%(crps_results.mean(),crps_results.std()))
+
 def train(model: nn.Module,
           optimizer: optim,
           loss_fn,
@@ -159,6 +169,7 @@ def train_and_evaluate(model: nn.Module,
         utils.plot_all_epoch(CRPS_summary, print_params + '_CRPS', location=params.plot_dir)
         utils.plot_all_epoch(loss_summary, print_params + '_loss', location=params.plot_dir)
 
+    stabilityTest(model, loss_fn, test_loader, params, best_test_CRPS[0])
 
 if __name__ == '__main__':
 

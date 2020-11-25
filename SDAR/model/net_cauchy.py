@@ -146,11 +146,13 @@ def loss_fn(x0: Variable, gama: Variable, labels: Variable):
         print('gama:')
         print(gama.cpu().detach().numpy())
         print('p:')
-        print(p.cpu().detach().numpy())
+        print(x0.cpu().detach().numpy())
         print('label:')
         print(labels.cpu().detach().numpy())
     return -torch.mean(likelihood)
 
+def loss_fn_crps(x0: Variable, gama: Variable, labels: Variable):
+    zero_index = (labels != 0)
 
 # if relative is set to True, metrics are not normalized by the scale of labels
 def accuracy_ND(mu: torch.Tensor, labels: torch.Tensor, relative=False):

@@ -52,7 +52,7 @@ class Net(nn.Module):
 
         self.relu = nn.ReLU()
 
-        self.distribution_pre = nn.Linear(params.lstm_hidden_dim * params.lstm_layers, 1)
+        self.distribution_x0 = nn.Linear(params.lstm_hidden_dim * params.lstm_layers, 1)
         self.distribution_pre_gama = nn.Linear(params.lstm_hidden_dim * params.lstm_layers, 1)
         self.distribution_gama = nn.Softplus()
 
@@ -77,13 +77,11 @@ class Net(nn.Module):
         hidden_permute = hidden.permute(1, 2, 0).contiguous().view(hidden.shape[1], -1)
 
         #### settings of beta distribution
-        pre_p = self.distribution_pre_p(hidden_permute)
-        p = self.distribution_p(pre_p) # sigmoid to make sure p value in [0, 1]
+        x0 = self.distribution_x0(hidden_permute)
         pre_gama = self.distribution_pre_gama(hidden_permute)
         gama = self.distribution_gama(pre_gama)  # softplus to make sure standard deviation is positive
 
-
-        return torch.squeeze(p), torch.squeeze(gama), hidden, cell
+        return torch.squeeze(x0), torch.squeeze(gama), hidden, cell
 
     def init_hidden(self, input_size):
         return torch.zeros(self.params.lstm_layers, input_size, self.params.lstm_hidden_dim, device=self.params.device)
@@ -100,17 +98,16 @@ class Net(nn.Module):
                 decoder_hidden = hidden
                 decoder_cell = cell
                 for t in range(self.params.predict_steps):
-                    p_de, gama_de, decoder_hidden, decoder_cell = self(x[self.params.predict_start + t].unsqueeze(0),
+                    x0_de, gama_de, decoder_hidden, decoder_cell = self(x[self.params.predict_start + t].unsqueeze(0),
                                                                        id_batch, decoder_hidden, decoder_cell)
-                    gama_de[(p_de * gama_de < 1) & (gama_de < 2)] = 3
-                    beta = torch.distributions.beta.Beta(p_de*gama_de, (1-p_de)*gama_de)
-                    pred = beta.sample()  # not scaled
+                    cauchy = torch.distributions.cauchy.Cauchy(x0_de, gama_de)
+                    pred = cauchy.sample()  # not scaled
                     samples[j, :, t] = pred
                     if t < (self.params.predict_steps - 1):
                         x[self.params.predict_start + t + 1, :, 0] = pred
 
-            sample_p = torch.mean(samples, dim=0)  # mean or median ?
-            sample_gama = sample_p*(1-sample_p)/samples.std(dim=0).pow(2)-1
+            sample_x0 = torch.median(samples, dim=0)  # mean or median ?
+            sample_gama = torch.quantile(samples, )
             return samples, sample_p, sample_gama
 
         else:

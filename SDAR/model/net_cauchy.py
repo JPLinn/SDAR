@@ -107,25 +107,26 @@ class Net(nn.Module):
                         x[self.params.predict_start + t + 1, :, 0] = pred
 
             sample_x0 = torch.median(samples, dim=0)  # mean or median ?
-            sample_gama = torch.quantile(samples, )
-            return samples, sample_p, sample_gama
+            sample_gama = sample_x0 - torch.quantile(samples, 0.25, dim=0)
+            sample_gama[sample_gama<=0] = 0.001
+            return samples, sample_x0, sample_gama
 
         else:
             decoder_hidden = hidden
             decoder_cell = cell
-            sample_p = torch.zeros(batch_size, self.params.predict_steps, device=self.params.device)
+            sample_x0 = torch.zeros(batch_size, self.params.predict_steps, device=self.params.device)
             sample_gama = torch.zeros(batch_size, self.params.predict_steps, device=self.params.device)
             for t in range(self.params.predict_steps):
-                p_de, gama_de, decoder_hidden, decoder_cell = self(x[self.params.predict_start + t].unsqueeze(0),
+                x0_de, gama_de, decoder_hidden, decoder_cell = self(x[self.params.predict_start + t].unsqueeze(0),
                                                                    id_batch, decoder_hidden, decoder_cell)
-                sample_p[:, t] = p_de
+                sample_x0[:, t] = x0_de
                 sample_gama[:, t] = gama_de
                 if t < (self.params.predict_steps - 1):
-                    x[self.params.predict_start + t + 1, :, 0] = p_de
-            return sample_p, sample_gama
+                    x[self.params.predict_start + t + 1, :, 0] = x0_de
+            return sample_x0, sample_gama
 
 
-def loss_fn(p: Variable, gama: Variable, labels: Variable):
+def loss_fn(x0: Variable, gama: Variable, labels: Variable):
     '''
     Compute using gaussian the log-likehood which needs to be maximized. Ignore time steps where labels are missing.
     Args:
@@ -136,8 +137,7 @@ def loss_fn(p: Variable, gama: Variable, labels: Variable):
         loss: (Variable) average log-likelihood loss across the batch
     '''
     zero_index = (labels != 0)
-    distribution = torch.distributions.beta.Beta(p[zero_index]*gama[zero_index],
-                                                 (1-p[zero_index])*gama[zero_index])
+    distribution = torch.distributions.cauchy.Cauchy(x0[zero_index], gama[zero_index])
     likelihood = distribution.log_prob(labels[zero_index])
     x = -torch.mean(likelihood)
     if torch.isnan(x):

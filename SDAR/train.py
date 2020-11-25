@@ -10,7 +10,7 @@ from torch.utils.data.sampler import RandomSampler
 from tqdm import tqdm
 
 import utils
-import model.net_normal as net
+import model.net_beta as net
 from evaluate import evaluate
 from dataloader import *
 

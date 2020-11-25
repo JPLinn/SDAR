@@ -188,7 +188,7 @@ if __name__ == '__main__':
 
     fit = calResi(data_frame,np.array((1,365,730)))
 
-    data_frame['power'] = data_frame['power'] - fit
+    data_frame['resi'] = data_frame['power'] - fit
     df = data_frame[data_frame.index.hour < 8]
     data_start = 0  # find first nonzero value in each time series
 

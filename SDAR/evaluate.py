@@ -8,7 +8,7 @@ from torch.utils.data.sampler import RandomSampler
 from tqdm import tqdm
 import pickle
 import utils
-import model.net_normal as net
+import model.net_beta as net
 from dataloader import *
 
 logger = logging.getLogger('DeepAR.Eval')

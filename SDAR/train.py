@@ -28,8 +28,8 @@ parser.add_argument('--restore-file', default=None,
                     training')  # 'best' or 'epoch_#'
 parser.add_argument('--mixing', default=False, help='Whether to train all the stations together')
 
-def stabilityTest(model: nn.Module, loss_fn, test_loader: Dataloader, params: utils.Params, epoch: int, num=10):
-    load_checkpoint('experiments/base_model/epoch_' + str(epoch) + '.pth.tar', model)
+def stabilityTest(model: nn.Module, loss_fn, test_loader: DataLoader, params: utils.Params, epoch: int, num=10):
+    utils.load_checkpoint('experiments/base_model/epoch_' + str(epoch) + '.pth.tar', model)
     logger.info('Epochs run out! Now start testing how stable the best epoch is !')
     crps_results = np.zeros(num)
     for k in range(num):

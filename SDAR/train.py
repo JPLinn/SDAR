@@ -108,7 +108,7 @@ def train_and_evaluate(model: nn.Module,
         logger.info('Restoring parameters from {}'.format(restore_path))
         utils.load_checkpoint(restore_path, model, optimizer)
     logger.info('begin training and evaluation')
-    best_test_CRPS = float('inf')
+    best_test_CRPS = (int(0), float('inf'))
     train_len = len(train_loader)
     CRPS_summary = np.zeros(params.num_epochs)
     loss_summary = np.zeros((train_len * params.num_epochs))
@@ -118,7 +118,7 @@ def train_and_evaluate(model: nn.Module,
                                                                         test_loader, params, epoch)
         test_metrics = evaluate(model, loss_fn, test_loader, params, epoch, sample=args.sampling)
         CRPS_summary[epoch] = test_metrics['crps']
-        is_best = CRPS_summary[epoch] <= best_test_CRPS
+        is_best = CRPS_summary[epoch] <= best_test_CRPS[1]
 
         # Save weights
         utils.save_checkpoint({'epoch': epoch + 1,
@@ -130,11 +130,11 @@ def train_and_evaluate(model: nn.Module,
 
         if is_best:
             logger.info('- Found new best CRPS')
-            best_test_CRPS = CRPS_summary[epoch]
+            best_test_CRPS = (epoch+1, CRPS_summary[epoch])
             best_json_path = os.path.join(params.model_dir, 'metrics_test_best_weights.json')
             utils.save_dict_to_json(test_metrics, best_json_path)
 
-        logger.info('Current Best CRPS is: %.5f' % best_test_CRPS)
+        logger.info('Current Best CRPS is: %.5f of epoch %d'%(best_test_CRPS[1], best_test_CRPS[0]))
 
         utils.plot_all_epoch(CRPS_summary[:epoch + 1], args.dataset + '_CRPS', params.plot_dir)
         utils.plot_all_epoch(loss_summary[:(epoch + 1) * train_len], args.dataset + '_loss', params.plot_dir)
@@ -152,9 +152,9 @@ def train_and_evaluate(model: nn.Module,
             print_params += f'{param}: {param_value:.2f}'
         print_params = print_params[:-1]
         f.write(print_params + '\n')
-        f.write('Best ND: ' + str(best_test_CRPS) + '\n')
+        f.write('Best CRPS: ' + str(best_test_CRPS) + '\n')
         logger.info(print_params)
-        logger.info(f'Best ND: {best_test_CRPS}')
+        logger.info(f'Best CRPS: {best_test_CRPS}')
         f.close()
         utils.plot_all_epoch(CRPS_summary, print_params + '_CRPS', location=params.plot_dir)
         utils.plot_all_epoch(loss_summary, print_params + '_loss', location=params.plot_dir)

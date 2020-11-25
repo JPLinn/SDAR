@@ -17166,3 +17166,22 @@ rc: [0.05501717 0.05121136 0.05696649 0.05770909]
 [15:00:06] DeepAR.Train: - Found new best ND
 [15:00:06] DeepAR.Train: Current Best ND is: inf
 [15:00:06] DeepAR.Train: Epoch 4/40
+[16:14:05] DeepAR.Train: Loading the datasets...
+[16:14:05] DeepAR.Data: train_len: 2877
+[16:14:05] DeepAR.Data: building datasets from data\Zone1...
+[16:14:05] DeepAR.Data: test_len: 725
+[16:14:05] DeepAR.Data: building datasets from data\Zone1...
+[16:14:05] DeepAR.Train: Loading complete.
+[16:14:05] DeepAR.Train: Model: 
+Net(
+  (embedding): Embedding(1, 20)
+  (lstm): LSTM(27, 40, num_layers=3, dropout=0.1)
+  (relu): ReLU()
+  (distribution_pre_p): Linear(in_features=120, out_features=1, bias=True)
+  (distribution_pre_gama): Linear(in_features=120, out_features=1, bias=True)
+  (distribution_p): Sigmoid()
+  (distribution_gama): Softplus(beta=1, threshold=20)
+)
+[16:14:05] DeepAR.Train: Starting training for 100 epoch(s)
+[16:14:05] DeepAR.Train: begin training and evaluation
+[16:14:05] DeepAR.Train: Epoch 1/100

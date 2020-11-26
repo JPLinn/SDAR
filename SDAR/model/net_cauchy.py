@@ -107,9 +107,9 @@ class Net(nn.Module):
                         x[self.params.predict_start + t + 1, :, 0] = pred
 
             sample_x0 = torch.median(samples, dim=0)  # mean or median ?
-            sample_gama = sample_x0 - torch.quantile(samples, 0.25, dim=0)
+            sample_gama = sample_x0.values - torch.quantile(samples, 0.25, dim=0)
             sample_gama[sample_gama<=0] = 0.001
-            return samples, sample_x0, sample_gama
+            return samples, sample_x0.values, sample_gama
 
         else:
             decoder_hidden = hidden

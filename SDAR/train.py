@@ -46,7 +46,7 @@ def stabilityTest(model: nn.Module, loss_fn, test_loader: DataLoader, params: ut
         rc_results[k] = results['rc']
         sharp50_results[k] = results['sharp50']
         sharp90_results[k] = results['sharp90']
-    logger.info('The MEAN and STDERR of metrics are:\n' +
+    logger.info('The MEAN and STDERR of metrics (epoch %d) are:\n'%(epoch) +
                 'CRPS: %.4f %.4f\n'%(crps_results.mean(),crps_results.std()) +
                 'ROU50: %.4f %.4f\n'%(rou50_results.mean(),rou50_results.std()) +
                 'ROu90: %.4f %.4f\n'%(rou90_results.mean(),rou90_results.std()) +

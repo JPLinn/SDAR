@@ -187,11 +187,16 @@ if __name__ == '__main__':
     data_frame.fillna(0, inplace=True)
 
     fit = calResi(data_frame,np.array((1,2,364,365,366,729,730,731)))
+    # fit = calResi(data_frame, np.array((1, 2, 3, 363, 364, 365, 366, 367, 728, 729, 730, 731, 732)))
+    # fit = calResi(data_frame, np.array((1, 365, 730)))
     data_frame['resi'] = data_frame['power'] - fit
 
     data_frame['logistic'] = -np.log(1 / data_frame['power'] - 1)
+    data_frame['logistic'][np.isposinf(data_frame['logistic'])] = 6.9
+    data_frame['logistic'][np.isneginf(data_frame['logistic'])] = -6.9
 
     df = data_frame[data_frame.index.hour < 8]
+
     data_start = 0  # find first nonzero value in each time series
 
     covariates = gen_covariates(df[train_start:test_end], num_covariates)

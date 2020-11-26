@@ -30,7 +30,7 @@ parser.add_argument('--mixing', default=False, help='Whether to train all the st
 
 def stabilityTest(model: nn.Module, loss_fn, test_loader: DataLoader, params: utils.Params, epoch: int, num=10):
     utils.load_checkpoint('experiments/base_model/epoch_' + str(epoch-1) + '.pth.tar', model)
-    logger.info('Epochs run out! Now start testing how stable the best epoch is !')
+    logger.info('Epochs run out! Now start testing how stable the best epoch (%d) is !'%(epoch))
     crps_results = np.zeros(num)
     rou50_results = np.zeros(num)
     rou90_results = np.zeros(num)

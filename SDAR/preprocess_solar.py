@@ -186,7 +186,7 @@ if __name__ == '__main__':
     data_frame = pd.read_csv(csv_path, sep=",", index_col=0, parse_dates=True)
     data_frame.fillna(0, inplace=True)
 
-    fit = calResi(data_frame,np.array((1,365,730)))
+    fit = calResi(data_frame,np.array((1,2,364,365,366,729,730,731)))
 
     data_frame['resi'] = data_frame['power'] - fit
     df = data_frame[data_frame.index.hour < 8]

@@ -130,10 +130,10 @@ def gen_covariates(raw, num_covariates):
     for i, input_time in enumerate(times):
         covariates[i, 0] = input_time.hour
         covariates[i, 1] = input_time.month
-    covariates[:, 2] = np.array(raw['ssrd'])  # relative humidity at 1000 m (r)
+    # covariates[:, 2] = np.array(raw['ssrd'])  # relative humidity at 1000 m (r)
     # covariates[:, 3] = np.array(raw['cs_ghi'])  # ghi in ideal clear sky (cs_ghi)
-    covariates[:, 3] = np.array(raw['2t'])  # total cloud cover (tcc)
-    covariates[:, 4] = np.array(raw['tcc'])  # temperature at 2 m (2t)
+    # covariates[:, 3] = np.array(raw['2t'])  # total cloud cover (tcc)
+    # covariates[:, 4] = np.array(raw['tcc'])  # temperature at 2 m (2t)
     # covariates[:, 5] = np.array(raw['rh']) # surface solar rad down (ssrd)
     # covariates[:, 6] = np.array(raw['strd']) # surface thermal rad down (strd)
     for i in range(2, num_covariates):

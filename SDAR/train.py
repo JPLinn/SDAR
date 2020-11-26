@@ -212,10 +212,10 @@ if __name__ == '__main__':
     cuda_exist = torch.cuda.is_available()
     # Set random seeds for reproducible experiments if necessary
     if cuda_exist:
-        params.device = torch.device('cuda')
+        params.device = torch.device('cuda:1')
         # torch.cuda.manual_seed(240)
         logger.info('Using Cuda...')
-        model = net.Net(params).cuda()
+        model = net.Net(params).cuda(params.device)
     else:
         params.device = torch.device('cpu')
         # torch.manual_seed(230)

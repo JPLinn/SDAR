@@ -32,7 +32,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 
-def prep_data(data, covariates, data_start, train=True, trunc=True):
+def prep_data(data, covariates, data_start, train=True, trunc=True, lag=1):
     # print("train: ", train)
     if train & trunc:
         data[data > 1] = 0.999
@@ -40,7 +40,7 @@ def prep_data(data, covariates, data_start, train=True, trunc=True):
     time_len = data.shape[0]
     input_size = window_size - stride_size
     windows = (time_len - window_size + 1)
-    x_input = np.zeros((windows, window_size, 2 + num_covariates + 1), dtype='float32')
+    x_input = np.zeros((windows, window_size, lag + num_covariates + 1), dtype='float32')
     label = np.zeros((windows, window_size), dtype='float32')
     count = 0
     if not train:
@@ -51,9 +51,9 @@ def prep_data(data, covariates, data_start, train=True, trunc=True):
         else:
             window_start = i
         window_end = window_start + window_size
-        x_input[count, 1:, 0] = data[window_start:window_end - 1]
-        x_input[count, 2:, 1] = data[window_start:window_end - 2]
-        x_input[count, :, 2:2 + num_covariates] = covariates[window_start:window_end, :]  # two lagged terms
+        for j in range(lag):
+            x_input[count, (j+1):, j] = data[window_start:window_end - j - 1]
+        x_input[count, :, lag:lag + num_covariates] = covariates[window_start:window_end, :]  # two lagged terms
         # x_input[count, :, -1] = series
         label[count, :] = data[window_start:window_end]
         nonzero_sum = (x_input[count, 1:input_size, 0] != 0).sum()
@@ -187,8 +187,10 @@ if __name__ == '__main__':
     data_frame.fillna(0, inplace=True)
 
     fit = calResi(data_frame,np.array((1,2,364,365,366,729,730,731)))
-
     data_frame['resi'] = data_frame['power'] - fit
+
+    data_frame['logistic'] = -np.log(1 / data_frame['power'] - 1)
+
     df = data_frame[data_frame.index.hour < 8]
     data_start = 0  # find first nonzero value in each time series
 

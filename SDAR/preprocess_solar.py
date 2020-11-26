@@ -171,7 +171,7 @@ if __name__ == '__main__':
     save_name = 'Zone1'
     window_size = 44
     stride_size = 4
-    num_covariates = 5
+    num_covariates = 2
     train_start = '2012-04-01 01:00:00'
     train_end = '2013-04-01 00:00:00'
     test_start = '2013-03-27 01:00:00'  # need additional 5 days as given info

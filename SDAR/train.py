@@ -10,7 +10,7 @@ from torch.utils.data.sampler import RandomSampler
 from tqdm import tqdm
 
 import utils
-import model.net_beta as net
+import model.net_normal as net
 from evaluate import evaluate
 from dataloader import *
 
@@ -47,12 +47,12 @@ def stabilityTest(model: nn.Module, loss_fn, test_loader: DataLoader, params: ut
         sharp50_results[k] = results['sharp50']
         sharp90_results[k] = results['sharp90']
     logger.info('The MEAN and STDERR of metrics are:\n' +
-                'CRPS: %.4f %.4f'%(crps_results.mean(),crps_results.std()) +
-                'ROU50: %.4f %.4f'%(rou50_results.mean(),rou50_results.std()) +
-                'ROu90: %.4f %.4f'%(rou90_results.mean(),rou90_results.std()) +
-                'RC: %.4f %.4f'%(rc_results.mean(),rc_results.std()) +
-                'SHARP50: %.4f %.4f'%(sharp50_results.mean(),sharp50_results.std()) +
-                'SHARP90: %.4f %.4f'%(sharp90_results.mean(),sharp90_results.std()))
+                'CRPS: %.4f %.4f\n'%(crps_results.mean(),crps_results.std()) +
+                'ROU50: %.4f %.4f\n'%(rou50_results.mean(),rou50_results.std()) +
+                'ROu90: %.4f %.4f\n'%(rou90_results.mean(),rou90_results.std()) +
+                'RC: %.4f %.4f\n'%(rc_results.mean(),rc_results.std()) +
+                'SHARP50: %.4f %.4f\n'%(sharp50_results.mean(),sharp50_results.std()) +
+                'SHARP90: %.4f %.4f\n'%(sharp90_results.mean(),sharp90_results.std()))
 
 def train(model: nn.Module,
           optimizer: optim,
@@ -215,7 +215,8 @@ if __name__ == '__main__':
         params.device = torch.device('cuda')
         # torch.cuda.manual_seed(240)
         logger.info('Using Cuda...')
-        model = net.Net(params).cuda()
+        model = net.Net(params)
+        model = nn.DataParallel(model).cuda()
     else:
         params.device = torch.device('cpu')
         # torch.manual_seed(230)

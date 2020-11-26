@@ -8,7 +8,7 @@ from torch.utils.data.sampler import RandomSampler
 from tqdm import tqdm
 import pickle
 import utils
-import model.net_beta as net
+import model.net_normal as net
 from dataloader import *
 
 logger = logging.getLogger('DeepAR.Eval')
@@ -76,7 +76,7 @@ def evaluate(model, loss_fn, test_loader, params, plot_num = 5, sample=True):
 
       summary_metric = utils.final_metrics(raw_metrics, sampling=sample)
       strings = '\nCRPS: ' + str(summary_metric['crps']) + '\nRMSE: ' + str(summary_metric['RMSE']) + '\nrou90: ' + str(summary_metric['rou90']) + \
-          '\nrou50: ' + str(summary_metric['rou50']) + '\nsharp90: ' + str(summary_metric['sharp'][:4]) +'\nsharp50: ' + str(summary_metric['sharp'][4:]) +\
+          '\nrou50: ' + str(summary_metric['rou50']) + '\nsharp50: ' + str(summary_metric['sharp'][:4]) +'\nsharp90: ' + str(summary_metric['sharp'][4:]) +\
           '\nrc: ' + str(summary_metric['rc'][:,-1])
       summary_metric['crps'] = summary_metric['crps'].mean()
       #metrics_string = '; '.join('{}: {:05.3f}'.format(k, v) for k, v in summary_metric.items())
@@ -85,8 +85,8 @@ def evaluate(model, loss_fn, test_loader, params, plot_num = 5, sample=True):
     ss_metric['crps'] = summary_metric['crps']
     ss_metric['rou90'] = summary_metric['rou90']
     ss_metric['rou50'] = summary_metric['rou50']
-    ss_metric['sharp90'] = summary_metric['sharp'][:4].mean()
-    ss_metric['sharp50'] = summary_metric['sharp'][4:].mean()
+    ss_metric['sharp50'] = summary_metric['sharp'][:4].mean()
+    ss_metric['sharp90'] = summary_metric['sharp'][4:].mean()
     ss_metric['rc'] = summary_metric['rc'][:,-1].mean()
     ss_metric['test_loss'] = summary_metric['test_loss']
     return ss_metric

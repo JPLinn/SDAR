@@ -194,8 +194,8 @@ if __name__ == '__main__':
 
     covariates = gen_covariates(df[train_start:test_end], num_covariates)
     # df['npower'] = df['power']*1000/df['cs_ghi']
-    train_data1 = df[train_start:train_end]['power'].values
-    test_data1 = df[test_start:test_end]['power'].values
+    train_data1 = df[train_start:train_end]['resi'].values
+    test_data1 = df[test_start:test_end]['resi'].values
 
     prep_data(train_data1, covariates, data_start, trunc=False)
     prep_data(test_data1, covariates, data_start, train=False)

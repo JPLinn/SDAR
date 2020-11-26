@@ -86,8 +86,8 @@ def train(model: nn.Module,
         idx = idx.unsqueeze(0).to(params.device)
 
         loss = torch.zeros(1, device=params.device)
-        hidden = model.init_hidden(batch_size)
-        cell = model.init_cell(batch_size)
+        hidden = model.module.init_hidden(batch_size)
+        cell = model.module.init_cell(batch_size)
 
         for t in range(params.train_window):
             # if z_t is missing, replace it by output mu from the last time step

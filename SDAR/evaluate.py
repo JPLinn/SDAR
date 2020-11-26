@@ -53,8 +53,8 @@ def evaluate(model, loss_fn, test_loader, params, plot_num = 5, sample=True):
           batch_size = test_batch.shape[1]
           input_mu = torch.zeros(batch_size, params.test_predict_start, device=params.device) # scaled
           input_sigma = torch.zeros(batch_size, params.test_predict_start, device=params.device) # scaled
-          hidden = model.module.init_hidden(batch_size)
-          cell = model.module.init_cell(batch_size)
+          hidden = model.init_hidden(batch_size)
+          cell = model.init_cell(batch_size)
 
           for t in range(params.test_predict_start):
               # if z_t is missing, replace it by output mu from the last time step

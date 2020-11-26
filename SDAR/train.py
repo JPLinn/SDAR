@@ -216,7 +216,8 @@ if __name__ == '__main__':
         # torch.cuda.manual_seed(240)
         logger.info('Using Cuda...')
         model = net.Net(params)
-        model = nn.DataParallel(model).cuda()
+        model = nn.DataParallel(model)
+        model.to(params.device)
     else:
         params.device = torch.device('cpu')
         # torch.manual_seed(230)

@@ -32,7 +32,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 
-def prep_data(data, covariates, data_start, train=True, trunc=True, lag=1):
+def prep_data(data, covariates, data_start, train=True, trunc=True, lag=2):
     # print("train: ", train)
     if train & trunc:
         data[data > 1] = 0.999

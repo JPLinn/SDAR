@@ -10,7 +10,7 @@ from torch.utils.data.sampler import RandomSampler
 from tqdm import tqdm
 
 import utils
-import model.net_normal as net
+import model.net_beta as net
 from evaluate import evaluate
 from dataloader import *
 
@@ -199,7 +199,7 @@ if __name__ == '__main__':
 
     params.relative_metrics = args.relative_metrics
     params.sampling = args.sampling
-    params.model_dir = model_dir + '1'
+    params.model_dir = model_dir + '3'
     params.plot_dir = os.path.join(model_dir, 'figures')
 
     # create missing directories
@@ -212,7 +212,7 @@ if __name__ == '__main__':
     cuda_exist = torch.cuda.is_available()
     # Set random seeds for reproducible experiments if necessary
     if cuda_exist:
-        params.device = torch.device('cuda:0')
+        params.device = torch.device('cuda:1')
         # torch.cuda.manual_seed(240)
         logger.info('Using Cuda...')
         model = net.Net(params).cuda(params.device)
@@ -227,8 +227,8 @@ if __name__ == '__main__':
 
     train_set = TrainDataset(data_dir, args.dataset, params.num_class)
     test_set = TestDataset(data_dir, args.dataset, params.num_class)
-    train_loader = DataLoader(train_set, batch_size=params.batch_size, num_workers=2) # modify 4 to 0
-    test_loader = DataLoader(test_set, batch_size=params.predict_batch, sampler=RandomSampler(test_set), num_workers=2) # modify 4 to 0
+    train_loader = DataLoader(train_set, batch_size=params.batch_size, num_workers=8) # modify 4 to 0
+    test_loader = DataLoader(test_set, batch_size=params.predict_batch, sampler=RandomSampler(test_set), num_workers=8) # modify 4 to 0
     logger.info('Loading complete.')
 
     logger.info(f'Model: \n{str(model)}')

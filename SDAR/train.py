@@ -29,14 +29,30 @@ parser.add_argument('--restore-file', default=None,
 parser.add_argument('--mixing', default=False, help='Whether to train all the stations together')
 
 def stabilityTest(model: nn.Module, loss_fn, test_loader: DataLoader, params: utils.Params, epoch: int, num=10):
-    utils.load_checkpoint('experiments/base_model/epoch_' + str(epoch) + '.pth.tar', model)
+    utils.load_checkpoint('experiments/base_model/epoch_' + str(epoch-1) + '.pth.tar', model)
     logger.info('Epochs run out! Now start testing how stable the best epoch is !')
     crps_results = np.zeros(num)
+    rou50_results = np.zeros(num)
+    rou90_results = np.zeros(num)
+    rc_results = np.zeros(num)
+    sharp90_results = np.zeros(num)
+    sharp50_results = np.zeros(num)
     for k in range(num):
         logger.info('Experiment %d'%(k+1))
         results = evaluate(model, loss_fn, test_loader, params)
         crps_results[k] = results['crps']
-    logger.info('The MEAN of CRPS is: %.4f\nThe STDERR of CRPS is: %.4f'%(crps_results.mean(),crps_results.std()))
+        rou50_results[k] = results['rou50']
+        rou90_results[k] = results['rou90']
+        rc_results[k] = results['rc']
+        sharp50_results[k] = results['sharp50']
+        sharp90_results[k] = results['sharp90']
+    logger.info('The MEAN and STDERR of metrics are:\n' +
+                'CRPS: %.4f %.4f'%(crps_results.mean(),crps_results.std()) +
+                'ROU50: %.4f %.4f'%(rou50_results.mean(),rou50_results.std()) +
+                'ROu90: %.4f %.4f'%(rou90_results.mean(),rou90_results.std()) +
+                'RC: %.4f %.4f'%(rc_results.mean(),rc_results.std()) +
+                'SHARP50: %.4f %.4f'%(sharp50_results.mean(),sharp50_results.std()) +
+                'SHARP90: %.4f %.4f'%(sharp90_results.mean(),sharp90_results.std()))
 
 def train(model: nn.Module,
           optimizer: optim,

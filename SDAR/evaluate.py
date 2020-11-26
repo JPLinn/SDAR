@@ -85,6 +85,9 @@ def evaluate(model, loss_fn, test_loader, params, plot_num = 5, sample=True):
     ss_metric['crps'] = summary_metric['crps']
     ss_metric['rou90'] = summary_metric['rou90']
     ss_metric['rou50'] = summary_metric['rou50']
+    ss_metric['sharp90'] = summary_metric['sharp'][:4].mean()
+    ss_metric['sharp50'] = summary_metric['sharp'][4:].mean()
+    ss_metric['rc'] = summary_metric['rc'][:,-1].mean()
     ss_metric['test_loss'] = summary_metric['test_loss']
     return ss_metric
 

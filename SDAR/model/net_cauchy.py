@@ -102,6 +102,8 @@ class Net(nn.Module):
                                                                        id_batch, decoder_hidden, decoder_cell)
                     cauchy = torch.distributions.cauchy.Cauchy(x0_de, gama_de)
                     pred = cauchy.sample()  # not scaled
+                    while torch.isinf(pred).sum() != 0:     # detect possible inf values
+                        pred = cauchy.sample()
                     samples[j, :, t] = pred
                     if t < (self.params.predict_steps - 1):
                         x[self.params.predict_start + t + 1, :, 0] = pred

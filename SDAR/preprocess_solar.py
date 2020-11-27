@@ -34,10 +34,11 @@ import matplotlib.pyplot as plt
 
 def prep_data(data, covariates, data_start, train=True, trunc=True, lag=2):
     # print("train: ", train)
+    x_data = data['resi'].values    # modify it!!!
     if train & trunc:
-        data[data > 1] = 0.999
-        data[data == 0] = 0.001
-    time_len = data.shape[0]
+        x_data[x_data > 1] = 0.999
+        x_data[x_data == 0] = 0.001
+    time_len = x_data.shape[0]
     input_size = window_size - stride_size
     windows = (time_len - window_size + 1)
     x_input = np.zeros((windows, window_size, lag + num_covariates + 1), dtype='float32')
@@ -52,10 +53,11 @@ def prep_data(data, covariates, data_start, train=True, trunc=True, lag=2):
             window_start = i
         window_end = window_start + window_size
         for j in range(lag):
-            x_input[count, (j+1):, j] = data[window_start:window_end - j - 1]
+            x_input[count, (j+1):, j] = x_data[window_start:window_end - j - 1]
         x_input[count, :, lag:lag + num_covariates] = covariates[window_start:window_end, :]  # two lagged terms
+        x_input[count, :, lag+num_covariates] = data['power'].values[window_start:window_end]
         # x_input[count, :, -1] = series
-        label[count, :] = data[window_start:window_end]
+        label[count, :] = x_data[window_start:window_end]
         nonzero_sum = (x_input[count, 1:input_size, 0] != 0).sum()
         count += 1
     prefix = os.path.join(save_path, 'train_' if train else 'test_')
@@ -201,8 +203,8 @@ if __name__ == '__main__':
 
     covariates = gen_covariates(df[train_start:test_end], num_covariates)
     # df['npower'] = df['power']*1000/df['cs_ghi']
-    train_data1 = df[train_start:train_end]['resi'].values
-    test_data1 = df[test_start:test_end]['resi'].values
+    train_data = df[train_start:train_end]
+    test_data = df[test_start:test_end]
 
-    prep_data(train_data1, covariates, data_start, trunc=False)
-    prep_data(test_data1, covariates, data_start, train=False)
+    prep_data(train_data, covariates, data_start, trunc=False)
+    prep_data(test_data, covariates, data_start, train=False)

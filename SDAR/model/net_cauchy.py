@@ -182,10 +182,10 @@ def loss_fn_rou(x0: Variable, gama: Variable, labels: Variable):
     zero_index = (labels != 0)
     rou50_score = torch.mean(torch.abs(labels - x0)).item()
     distribution = torch.distributions.cauchy.Cauchy(x0[zero_index], gama[zero_index])
-    rou75_diff = labels - distribution.icdf(0.75)
+    rou75_diff = labels - distribution.icdf(torch.tensor(0.75))
     rou75_score = 2 * torch.sum(
         0.75 * rou75_diff[rou75_diff > 0] - 0.25 * rou75_diff[rou75_diff < 0]).item() / labels.numel()
-    rou25_diff = labels - distribution.icdf(0.25)
+    rou25_diff = labels - distribution.icdf(torch.tensor(.25))
     rou25_score = 2 * torch.sum(
         0.25 * rou25_diff[rou25_diff > 0] - 0.75 * rou25_diff[rou25_diff < 0]).item() / labels.numel()
     rou_score = (rou75_score + rou25_score + rou50_score)/3

@@ -153,9 +153,38 @@ def loss_fn(x0: Variable, gama: Variable, labels: Variable):
         print(labels.cpu().detach().numpy())
     return -torch.mean(likelihood)
 
-def loss_fn_crps(x0: Variable, gama: Variable, labels: Variable):
+def loss_fn(x0: Variable, gama: Variable, labels: Variable):
+    '''
+    Compute using gaussian the log-likehood which needs to be maximized. Ignore time steps where labels are missing.
+    Args:
+        mu: (Variable) dimension [batch_size] - estimated mean at time step t
+        sigma: (Variable) dimension [batch_size] - estimated standard deviation at time step t
+        labels: (Variable) dimension [batch_size] z_t
+    Returns:
+        loss: (Variable) average log-likelihood loss across the batch
+    '''
     zero_index = (labels != 0)
+    distribution = torch.distributions.cauchy.Cauchy(x0[zero_index], gama[zero_index])
+    likelihood = distribution.log_prob(labels[zero_index])
+    x = -torch.mean(likelihood)
+    if torch.isnan(x):
+        print('likelihood:')
+        print(likelihood.cpu().detach().numpy())
+        print('gama:')
+        print(gama.cpu().detach().numpy())
+        print('p:')
+        print(x0.cpu().detach().numpy())
+        print('label:')
+        print(labels.cpu().detach().numpy())
+    return -torch.mean(likelihood)
 
+def loss_fn_rou(x0: Variable, gama: Variable, labels: Variable):
+    zero_index = (labels != 0)
+    rou50_score = torch.mean(torch.abs(labels-x0)).item()
+    # distribution = torch.distributions.cauchy.Cauchy(x0[zero_index], gama[zero_index])
+    # rou75_diff = labels - distribution.icdf(0.75)
+    # rou75_score =
+    return rou50_score
 # if relative is set to True, metrics are not normalized by the scale of labels
 def accuracy_ND(mu: torch.Tensor, labels: torch.Tensor, relative=False):
     zero_index = (labels != 0)

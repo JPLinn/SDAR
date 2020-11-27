@@ -143,13 +143,6 @@ def gen_covariates(raw, num_covariates):
     return covariates[:, :num_covariates]
 
 
-def visualize(data, week_start):
-    x = np.arange(window_size)
-    f = plt.figure()
-    plt.plot(x, data[week_start:week_start + window_size], color='b')
-    f.savefig("visual.png")
-    plt.close()
-
 
 def calResi(df, terms):
     power = df['power'].values
@@ -206,5 +199,5 @@ if __name__ == '__main__':
     train_data = df[train_start:train_end]
     test_data = df[test_start:test_end]
 
-    prep_data(train_data, covariates, data_start, trunc=False)
-    prep_data(test_data, covariates, data_start, train=False)
+    prep_data(train_data, covariates, data_start, trunc=False, lag=3)
+    prep_data(test_data, covariates, data_start, train=False, lag=3)

@@ -99,10 +99,10 @@ class Net(nn.Module):
                 decoder_cell = cell
                 for t in range(self.params.predict_steps):
                     x0_de, gama_de, decoder_hidden, decoder_cell = self(x[self.params.predict_start + t].unsqueeze(0),
-                                                                       id_batch, decoder_hidden, decoder_cell)
+                                                                        id_batch, decoder_hidden, decoder_cell)
                     cauchy = torch.distributions.cauchy.Cauchy(x0_de, gama_de)
                     pred = cauchy.sample()  # not scaled
-                    while torch.isinf(pred).sum() != 0:     # detect possible inf values
+                    while torch.isinf(pred).sum() != 0:  # detect possible inf values
                         pred = cauchy.sample()
                     samples[j, :, t] = pred
                     if t < (self.params.predict_steps - 1):
@@ -110,7 +110,7 @@ class Net(nn.Module):
 
             sample_x0 = torch.median(samples, dim=0)  # mean or median ?
             sample_gama = sample_x0.values - torch.quantile(samples, 0.25, dim=0)
-            sample_gama[sample_gama<=0] = 0.001
+            sample_gama[sample_gama <= 0] = 0.001
             return samples, sample_x0.values, sample_gama
 
         else:
@@ -120,7 +120,7 @@ class Net(nn.Module):
             sample_gama = torch.zeros(batch_size, self.params.predict_steps, device=self.params.device)
             for t in range(self.params.predict_steps):
                 x0_de, gama_de, decoder_hidden, decoder_cell = self(x[self.params.predict_start + t].unsqueeze(0),
-                                                                   id_batch, decoder_hidden, decoder_cell)
+                                                                    id_batch, decoder_hidden, decoder_cell)
                 sample_x0[:, t] = x0_de
                 sample_gama[:, t] = gama_de
                 if t < (self.params.predict_steps - 1):
@@ -153,6 +153,7 @@ def loss_fn(x0: Variable, gama: Variable, labels: Variable):
         print(labels.cpu().detach().numpy())
     return -torch.mean(likelihood)
 
+
 def loss_fn(x0: Variable, gama: Variable, labels: Variable):
     '''
     Compute using gaussian the log-likehood which needs to be maximized. Ignore time steps where labels are missing.
@@ -178,18 +179,20 @@ def loss_fn(x0: Variable, gama: Variable, labels: Variable):
         print(labels.cpu().detach().numpy())
     return -torch.mean(likelihood)
 
+
 def loss_fn_rou(x0: Variable, gama: Variable, labels: Variable):
     zero_index = (labels != 0)
     rou50_score = torch.mean(torch.abs(labels - x0)).item()
     distribution = torch.distributions.cauchy.Cauchy(x0[zero_index], gama[zero_index])
     rou75_diff = labels - distribution.icdf(torch.tensor(0.75))
-    rou75_score = 2 * torch.sum(
-        0.75 * rou75_diff[rou75_diff > 0] - 0.25 * rou75_diff[rou75_diff < 0]).item() / labels.numel()
+    rou75_score = 2 * (0.75 * torch.sum(rou75_diff[rou75_diff > 0]) - 0.25 * torch.sum(
+        rou75_diff[rou75_diff < 0])) / labels.numel()
     rou25_diff = labels - distribution.icdf(torch.tensor(.25))
-    rou25_score = 2 * torch.sum(
-        0.25 * rou25_diff[rou25_diff > 0] - 0.75 * rou25_diff[rou25_diff < 0]).item() / labels.numel()
-    rou_score = (rou75_score + rou25_score + rou50_score)/3
+    rou25_score = 2 * (0.25 * torch.sum(rou25_diff[rou25_diff > 0]) - 0.75 * torch.sum(
+        rou25_diff[rou25_diff < 0])) / labels.numel()
+    rou_score = (rou75_score + rou25_score + rou50_score) / 3
     return rou_score
+
 
 # if relative is set to True, metrics are not normalized by the scale of labels
 def accuracy_ND(mu: torch.Tensor, labels: torch.Tensor, relative=False):

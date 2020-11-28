@@ -29,6 +29,7 @@ parser.add_argument('--restore-file', default=None,
                     help='Optional, name of the file in --model_dir containing weights to reload before \
                     training')  # 'best' or 'epoch_#'
 parser.add_argument('--mixing', default=False, help='Whether to train all the stations together')
+parser.add_argument('--trans', default=None, help='Whether to pre-transform data')
 
 def stabilityTest(model: nn.Module, loss_fn, test_loader: DataLoader, params: utils.Params, epoch: int, num=10):
     utils.load_checkpoint(params.model_dir + '/epoch_' + str(epoch-1) + '.pth.tar', model)
@@ -202,8 +203,8 @@ if __name__ == '__main__':
     params.relative_metrics = args.relative_metrics
     params.sampling = args.sampling
     params.model_dir = model_dir + '3'
-    params.plot_dir = os.path.join(params.model_dir, 'figures')
-
+    params.plot_dir = os.path.join(model_dir, 'figures')
+    params.trans = 'logistic'
     # create missing directories
     try:
         os.mkdir(params.plot_dir)
@@ -214,7 +215,7 @@ if __name__ == '__main__':
     cuda_exist = torch.cuda.is_available()
     # Set random seeds for reproducible experiments if necessary
     if cuda_exist:
-        params.device = torch.device('cuda:1')
+        params.device = torch.device('cuda:0')
         # torch.cuda.manual_seed(240)
         logger.info('Using Cuda...')
         model = net.Net(params).cuda(params.device)
@@ -237,7 +238,7 @@ if __name__ == '__main__':
     optimizer = optim.Adam(model.parameters(), lr=params.learning_rate)
 
     # fetch loss function
-    loss_fn = net.loss_fn
+    loss_fn = net.loss_fn_rou
 
     # Train the model
     logger.info('Starting training for {} epoch(s)'.format(params.num_epochs))

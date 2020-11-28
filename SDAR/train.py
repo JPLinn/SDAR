@@ -203,7 +203,7 @@ if __name__ == '__main__':
     params.relative_metrics = args.relative_metrics
     params.sampling = args.sampling
     params.model_dir = model_dir + '5'
-    params.plot_dir = os.path.join(model_dir, 'figures')
+    params.plot_dir = os.path.join(params.model_dir, 'figures')
     params.trans = None
     # create missing directories
     try:

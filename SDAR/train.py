@@ -207,7 +207,7 @@ if __name__ == '__main__':
     params.trans = 'logistic'
     # create missing directories
     try:
-        os.mkdir(params.plot_dir)
+        os.makedirs(params.plot_dir)
     except FileExistsError:
         pass
 

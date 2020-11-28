@@ -32,12 +32,9 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 
-def prep_data(data, covariates, data_start, train=True, trunc=True, lag=2):
+def prep_data(data, covariates, data_start, train=True, name='power', lag=2):
     # print("train: ", train)
-    x_data = data['resi'].values    # modify it!!!
-    if train & trunc:
-        x_data[x_data > 1] = 0.999
-        x_data[x_data == 0] = 0.001
+    x_data = data[name].values    # modify it!!!
     time_len = x_data.shape[0]
     input_size = window_size - stride_size
     windows = (time_len - window_size + 1)
@@ -126,9 +123,15 @@ if __name__ == '__main__':
     # fit = calResi(data_frame, np.array((1, 365, 730)))
     data_frame['resi'] = data_frame['power'] - fit
 
+    # remove extreme values from power data to prepare for the next transformations
+    data_frame['power'][data_frame['power']>=1] = 0.9999
+    data_frame['power'][data_frame['power']<=0] = 0.0001
+
     data_frame['logistic'] = -np.log(1 / data_frame['power'] - 1)
     data_frame['logistic'][np.isposinf(data_frame['logistic'])] = 6.9
     data_frame['logistic'][np.isneginf(data_frame['logistic'])] = -6.9
+
+    data_frame['abssig'] = (2*data_frame['power']-1)/(1-np.abs(2*data_frame['power']-1))
 
     df = data_frame[data_frame.index.hour < 8]
 
@@ -139,5 +142,5 @@ if __name__ == '__main__':
     train_data = df[train_start:train_end]
     test_data = df[test_start:test_end]
 
-    prep_data(train_data, covariates, data_start, trunc=False, lag=3)
-    prep_data(test_data, covariates, data_start, train=False, lag=3)
+    prep_data(train_data, covariates, data_start, name='abssig', lag=3)
+    prep_data(test_data, covariates, data_start, name='abssig', lag=3)

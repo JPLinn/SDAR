@@ -28,6 +28,9 @@ def transform(samples, labels, trans):
     if trans == 'logistic':
         samples = 1 / (1 + torch.exp(-samples))
         labels = 1 / (1 + torch.exp(-labels))
+    elif trans == 'abssig':
+        samples = (samples/(1+torch.abs(samples))+1)/2.
+        labels = (labels/(1+torch.abs(labels))+1)/2.
     return samples, labels
 
 

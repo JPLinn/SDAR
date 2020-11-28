@@ -13,7 +13,9 @@ matplotlib.use('Agg')
 #matplotlib.rcParams['savefig.dpi'] = 300 #Uncomment for higher plot resolutions
 import matplotlib.pyplot as plt
 
-import model.net_normal as net
+# import model.net_normal as net
+# import model.net_beta as net
+import model.net_cauchy as net
 
 logger = logging.getLogger('DeepAR.Utils')
 

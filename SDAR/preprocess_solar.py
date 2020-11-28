@@ -69,12 +69,12 @@ def gen_covariates(raw, num_covariates):
     for i, input_time in enumerate(times):
         covariates[i, 0] = input_time.hour
         covariates[i, 1] = input_time.month
-    # covariates[:, 2] = np.array(raw['ssrd'])  # relative humidity at 1000 m (r)
+    covariates[:, 2] = np.array(raw['ssrd'])  # relative humidity at 1000 m (r)
     # covariates[:, 3] = np.array(raw['cs_ghi'])  # ghi in ideal clear sky (cs_ghi)
-    # covariates[:, 3] = np.array(raw['2t'])  # total cloud cover (tcc)
-    # covariates[:, 4] = np.array(raw['tcc'])  # temperature at 2 m (2t)
-    # covariates[:, 5] = np.array(raw['rh']) # surface solar rad down (ssrd)
-    # covariates[:, 6] = np.array(raw['strd']) # surface thermal rad down (strd)
+    covariates[:, 3] = np.array(raw['2t'])  # total cloud cover (tcc)
+    covariates[:, 4] = np.array(raw['tcc'])  # temperature at 2 m (2t)
+    covariates[:, 5] = np.array(raw['rh']) # surface solar rad down (ssrd)
+    covariates[:, 6] = np.array(raw['strd']) # surface thermal rad down (strd)
     for i in range(2, num_covariates):
         covariates[:, i] = stats.zscore(covariates[:, i])
     return covariates[:, :num_covariates]
@@ -103,7 +103,7 @@ if __name__ == '__main__':
     save_name = 'Zone1'
     window_size = 44
     stride_size = 4
-    num_covariates = 2
+    num_covariates = 7
     train_start = '2012-04-01 01:00:00'
     train_end = '2013-04-01 00:00:00'
     test_start = '2013-03-27 01:00:00'  # need additional 5 days as given info
@@ -142,5 +142,5 @@ if __name__ == '__main__':
     train_data = df[train_start:train_end]
     test_data = df[test_start:test_end]
 
-    prep_data(train_data, covariates, data_start, name='abssig', lag=3)
-    prep_data(test_data, covariates, data_start, name='abssig', lag=3)
+    prep_data(train_data, covariates, data_start, name='power', lag=3)
+    prep_data(test_data, covariates, data_start, train=False, name='power', lag=3)

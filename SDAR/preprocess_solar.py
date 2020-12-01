@@ -88,7 +88,8 @@ def calResi(df, terms):
     t = np.arange(power.size)
     for term in terms:
         w = 2 * np.pi * term / 8760
-        fit = fit + 2 * (np.real(spec[term]) * np.cos(w * t) - np.imag(spec[term]) * np.sin(w * t))
+        fit = fit + 2 * (np.real(spec[term]) * np.cos(w * t) -
+                         np.imag(spec[term]) * np.sin(w * t))
     fit = fit / 8760 + power[:8760].mean()
     # reSpec = np.zeros(8760,dtype=complex)
     # reSpec[terms] = spec[terms]

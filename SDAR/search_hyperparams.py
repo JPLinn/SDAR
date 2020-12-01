@@ -22,12 +22,12 @@ args: argparse.ArgumentParser
 search_params: dict
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--dataset', default='elect', help='Dataset name')
+parser.add_argument('--dataset', default='Zone1', help='Dataset name')
 parser.add_argument('--data-dir', default='data', help='Directory containing the dataset')
 parser.add_argument('--model-name', default='param_search', help='Parent directory for all jobs')
 parser.add_argument('--relative-metrics', action='store_true', help='Whether to normalize the metrics by label scales')
-parser.add_argument('--gpu-ids', nargs='+', default=[0], type=int, help='GPU ids')
-parser.add_argument('--sampling', action='store_true', help='Whether to do ancestral sampling during evaluation')
+parser.add_argument('--gpu-ids', nargs='+', default=[0,1], type=int, help='GPU ids')
+parser.add_argument('--sampling', help='Whether to do ancestral sampling during evaluation', default=True)
 
 
 def launch_training_job(search_range):

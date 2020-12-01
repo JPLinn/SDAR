@@ -31,10 +31,10 @@ parser.add_argument('--sampling', help='Whether to do ancestral sampling during 
 
 
 def launch_training_job(search_range):
-    '''Launch training of the model with a set of hyperparameters in parent_dir/job_name
+    """Launch training of the model with a set of hyper-parameters in parent_dir/job_name
     Args:
         search_range: one combination of the params to search
-    '''
+    """
 
     search_range = search_range[0]
     params = {k: search_params[k][search_range[idx]] for idx, k in enumerate(sorted(search_params.keys()))}

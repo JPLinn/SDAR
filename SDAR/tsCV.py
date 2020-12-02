@@ -42,40 +42,41 @@ parser.add_argument('--trans', default=None,
 
 
 def stabilityTest(model: nn.Module, loss_fn, test_loader: DataLoader,
-                  params: utils.Params, epoch: int, num=10):
+                  params: utils.Params, epoch: int, id: int,
+                  result_dict: dict, num=10):
     utils.load_checkpoint(
         params.model_dir + '/epoch_' + str(epoch - 1) + '.pth.tar', model)
     logger.info(
         'Epochs run out! Now start testing how stable the best epoch (%d) is '
-        '!' % (
-            epoch))
+        '!' % (epoch))
     crps_results = np.zeros(num)
-    rou50_results = np.zeros(num)
-    rou90_results = np.zeros(num)
-    rc_results = np.zeros(num)
-    sharp90_results = np.zeros(num)
-    sharp50_results = np.zeros(num)
+    # rou50_results = np.zeros(num)
+    # rou90_results = np.zeros(num)
+    # rc_results = np.zeros(num)
+    # sharp90_results = np.zeros(num)
+    # sharp50_results = np.zeros(num)
     for k in range(num):
-        logger.info('Experiment %d' % (k + 1))
+        # logger.info('Experiment %d' % (k + 1))
         results = evaluate(model, loss_fn, test_loader, params)
         crps_results[k] = results['crps']
-        rou50_results[k] = results['rou50']
-        rou90_results[k] = results['rou90']
-        rc_results[k] = results['rc']
-        sharp50_results[k] = results['sharp50']
-        sharp90_results[k] = results['sharp90']
-    logger.info('The MEAN and STDERR of metrics (epoch %d) are:\n' % (epoch) +
-                'CRPS: %.4f %.4f\n' % (
-                crps_results.mean(), crps_results.std()) +
-                'ROU50: %.4f %.4f\n' % (
-                rou50_results.mean(), rou50_results.std()) +
-                'ROu90: %.4f %.4f\n' % (
-                rou90_results.mean(), rou90_results.std()) +
-                'RC: %.4f %.4f\n' % (rc_results.mean(), rc_results.std()) +
-                'SHARP50: %.4f %.4f\n' % (
-                sharp50_results.mean(), sharp50_results.std()) +
-                'SHARP90: %.4f %.4f\n' % (
-                sharp90_results.mean(), sharp90_results.std()))
+    result_dict[id] = [crps_results.mean(), crps_results.std()]
+        # rou50_results[k] = results['rou50']
+        # rou90_results[k] = results['rou90']
+        # rc_results[k] = results['rc']
+        # sharp50_results[k] = results['sharp50']
+        # sharp90_results[k] = results['sharp90']
+    # logger.info('The MEAN and STDERR of metrics (epoch %d) are:\n' % (epoch) +
+    #             'CRPS: %.4f %.4f\n' % (
+    #             crps_results.mean(), crps_results.std()) +
+    #             'ROU50: %.4f %.4f\n' % (
+    #             rou50_results.mean(), rou50_results.std()) +
+    #             'ROu90: %.4f %.4f\n' % (
+    #             rou90_results.mean(), rou90_results.std()) +
+    #             'RC: %.4f %.4f\n' % (rc_results.mean(), rc_results.std()) +
+    #             'SHARP50: %.4f %.4f\n' % (
+    #             sharp50_results.mean(), sharp50_results.std()) +
+    #             'SHARP90: %.4f %.4f\n' % (
+    #             sharp90_results.mean(), sharp90_results.std()))
 
 
 def train(model: nn.Module,
@@ -226,8 +227,8 @@ def train_and_evaluate(model: nn.Module,
         utils.plot_all_epoch(loss_summary, print_params + '_loss',
                              location=params.plot_dir)
 
-    return_dict[id] = best_test_CRPS[1]
-    # stabilityTest(model, loss_fn, test_loader, params, best_test_CRPS[0])
+    stabilityTest(model, loss_fn, test_loader, params, best_test_CRPS[0],
+                  id, return_dict)
 
 
 def start_train(model: nn.Module, params: utils.Params,
@@ -245,6 +246,8 @@ def start_train(model: nn.Module, params: utils.Params,
     # fetch loss function
     loss_fn = net.loss_fn_rou
 
+    utils.set_logger(os.path.join(model_dir, 'train.log'))
+    logger.info('Staring training')
     # Train the model
     train_and_evaluate(model, train_loader, test_loader, optimizer, loss_fn,
                        params, id, return_dict)
@@ -287,5 +290,10 @@ if __name__ == '__main__':
     pool.join()
     return_dict = dict(return_dict)
     print(return_dict)
+    crps_mean = 0
+    for i in range(6):
+        crps_mean += return_dict[i][0]
+    crps_mean /= 6
+    print('\nMean CRPS is %.4f'%crps_mean)
 
 

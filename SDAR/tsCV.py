@@ -235,10 +235,10 @@ def start_train(model: nn.Module, params: utils.Params,
     train_set = TrainDataset(params.data_dir, args.dataset, params.num_class)
     test_set = TestDataset(params.data_dir, args.dataset, params.num_class)
     train_loader = DataLoader(train_set, batch_size=params.batch_size,
-                              num_workers=16)  # modify 4 to 0
+                              num_workers=0)  # modify 4 to 0
     test_loader = DataLoader(test_set, batch_size=params.predict_batch,
                              sampler=RandomSampler(test_set),
-                             num_workers=16)  # modify 4 to 0
+                             num_workers=0)  # modify 4 to 0
 
     optimizer = optim.Adam(model.parameters(), lr=params.learning_rate)
 
@@ -277,10 +277,10 @@ if __name__ == '__main__':
         except FileExistsError:
             pass
 
-        tparams.device = torch.device('cuda:' + str(i//2))
+        tparams.device = torch.device('cuda:' + str(i%2))
         model = net.Net(tparams).cuda(tparams.device)
         logger.info('the %d th process'%(i))
-        pool.apply(start_train, args=(model, tparams, i, return_dict))
+        pool.apply_async(start_train, args=(model, tparams, i, return_dict))
 
     pool.close()
     pool.join()

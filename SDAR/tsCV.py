@@ -43,7 +43,7 @@ parser.add_argument('--trans', default=None,
 
 def stabilityTest(model: nn.Module, loss_fn, test_loader: DataLoader,
                   params: utils.Params, epoch: int, id: int,
-                  result_dict: dict, num=10):
+                  result_dict: dict, num=1):
     utils.load_checkpoint(
         params.model_dir + '/epoch_' + str(epoch - 1) + '.pth.tar', model)
     logger.info(
@@ -246,7 +246,7 @@ def start_train(model: nn.Module, params: utils.Params,
     # fetch loss function
     loss_fn = net.loss_fn_rou
 
-    utils.set_logger(os.path.join(model_dir, 'train.log'))
+    utils.set_logger(os.path.join(params.model_dir, 'train.log'))
     logger.info('Staring training')
     # Train the model
     train_and_evaluate(model, train_loader, test_loader, optimizer, loss_fn,

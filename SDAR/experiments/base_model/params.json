@@ -2,7 +2,7 @@
     "learning_rate": 1e-3,
     "batch_size": 256,
     "lstm_layers": 3,
-    "num_epochs": 1,
+    "num_epochs": 200,
     "train_window": 44,
     "test_window": 44,
     "predict_start": 40,

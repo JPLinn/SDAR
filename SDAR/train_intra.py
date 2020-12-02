@@ -279,7 +279,7 @@ if __name__ == '__main__':
 
         tparams.device = torch.device('cuda:' + str(i//2))
         model = net.Net(tparams).cuda(tparams.device)
-
+        logger.info('the %d th process'%(i))
         pool.apply(start_train, args=(model, tparams, i, return_dict))
 
     pool.close()

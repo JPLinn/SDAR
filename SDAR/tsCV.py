@@ -43,7 +43,7 @@ parser.add_argument('--trans', default=None,
 
 def stabilityTest(model: nn.Module, loss_fn, test_loader: DataLoader,
                   params: utils.Params, epoch: int, id: int,
-                  result_dict: dict, num=1):
+                  result_dict: dict, num=10):
     utils.load_checkpoint(
         params.model_dir + '/epoch_' + str(epoch - 1) + '.pth.tar', model)
     logger.info(

@@ -68,25 +68,25 @@ def evaluate(model, loss_fn, test_loader, params, plot_num=5, sample=True):
 
             for t in range(params.test_predict_start):
                 # if z_t is missing, replace it by output mu from the last time step
-                zero_index = (test_batch[t, :, 0] == 0)
-                if t > 0 and torch.sum(zero_index) > 0:
-                    test_batch[t, zero_index, 0] = mu[zero_index]
+                # zero_index = (test_batch[t, :, 0] == 0)
+                # if t > 0 and torch.sum(zero_index) > 0:
+                #     test_batch[t, zero_index, 0] = mu[zero_index]
 
-                mu, sigma, hidden, cell = model(test_batch[t].unsqueeze(0), id_batch, hidden, cell)
-                input_mu[:, t] = mu
-                input_sigma[:, t] = sigma
+                u, beta, gama, hidden, cell = \
+                    model(test_batch[t].unsqueeze(0), id_batch, hidden, cell)
 
             if sample:
-                samples, sample_mu, sample_sigma = model.test(test_batch, id_batch, hidden, cell, sampling=True)
+                samples, sample_mu, _ = \
+                    model.test(test_batch, id_batch, hidden, cell,
+                               sampling=True)
                 if params.trans:
                     samples, labels = transform(samples, labels, params.trans)
-                raw_metrics = utils.update_metrics(raw_metrics, input_mu, input_sigma, sample_mu, labels,
-                                                   params.test_predict_start, samples, relative=params.relative_metrics)
+                raw_metrics = \
+                    utils.update_metrics(raw_metrics, sample_mu, labels,
+                                         params.test_predict_start, samples,
+                                         relative=params.relative_metrics)
             else:
-                sample_mu, sample_sigma = model.test(test_batch, id_batch, hidden, cell)
-                raw_metrics = utils.update_metrics(raw_metrics, input_mu, input_sigma, sample_mu, labels,
-                                                   params.test_predict_start, relative=params.relative_metrics)
-
+                print("hello")
         summary_metric = utils.final_metrics(raw_metrics, sampling=sample)
         strings = '\nCRPS: ' + str(summary_metric['crps']) + '\nRMSE: ' + str(
             summary_metric['RMSE']) + '\nrou90: ' + str(summary_metric['rou90']) + \
@@ -94,7 +94,6 @@ def evaluate(model, loss_fn, test_loader, params, plot_num=5, sample=True):
             summary_metric['sharp'][:4]) + '\nsharp90: ' + str(summary_metric['sharp'][4:]) + \
                   '\nrc: ' + str(summary_metric['rc'][:, -1])
         summary_metric['crps'] = summary_metric['crps'].mean()
-        # metrics_string = '; '.join('{}: {:05.3f}'.format(k, v) for k, v in summary_metric.items())
         logger.info('- Full test metrics: ' + strings)
     ss_metric = {}
     ss_metric['crps'] = summary_metric['crps']
@@ -103,7 +102,7 @@ def evaluate(model, loss_fn, test_loader, params, plot_num=5, sample=True):
     ss_metric['sharp50'] = summary_metric['sharp'][:4].mean()
     ss_metric['sharp90'] = summary_metric['sharp'][4:].mean()
     ss_metric['rc'] = summary_metric['rc'][:, -1].mean()
-    ss_metric['test_loss'] = summary_metric['test_loss']
+    # ss_metric['test_loss'] = summary_metric['test_loss']
     return ss_metric
 
 

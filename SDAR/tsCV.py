@@ -244,7 +244,7 @@ def start_train(model: nn.Module, params: utils.Params,
     optimizer = optim.Adam(model.parameters(), lr=params.learning_rate)
 
     # fetch loss function
-    loss_fn = net.loss_fn_rou
+    loss_fn = net.loss_fn
 
     utils.set_logger(os.path.join(params.model_dir, 'train.log'))
     logger.info('Staring training')

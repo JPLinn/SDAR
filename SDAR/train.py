@@ -10,9 +10,11 @@ from torch.utils.data.sampler import RandomSampler
 from tqdm import tqdm
 
 import utils
-import model.net_beta as net
+# import model.net_beta as net
 # import model.net_normal as net
 # import model.net_cauchy as net
+import model.net_lspline as net
+
 from evaluate import evaluate
 from dataloader import *
 
@@ -20,16 +22,21 @@ logger = logging.getLogger('DeepAR.Train')
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', default='Zone1', help='Name of the dataset')
-parser.add_argument('--data-folder', default='data', help='Parent dir of the dataset')
-parser.add_argument('--model-name', default='base_model', help='Directory containing params.json')
-parser.add_argument('--relative-metrics', action='store_true', help='Whether to normalize the metrics by label scales')
-parser.add_argument('--sampling', action='store_true', help='Whether to sample during evaluation', default=True)
-parser.add_argument('--save-best', action='store_true', help='Whether to save best ND to param_search.txt')
+parser.add_argument('--data-folder', default='data',
+                    help='Parent dir of the dataset')
+parser.add_argument('--model-name', default='base_model',
+                    help='Directory containing params.json')
+parser.add_argument('--relative-metrics', action='store_true',
+                    help='Whether to normalize the metrics by label scales')
+parser.add_argument('--sampling', action='store_true',
+                    help='Whether to sample during evaluation', default=True)
+parser.add_argument('--save-best', action='store_true',
+                    help='Whether to save best ND to param_search.txt')
 parser.add_argument('--restore-file', default=None,
-                    help='Optional, name of the file in --model_dir containing weights to reload before \
-                    training')  # 'best' or 'epoch_#'
-parser.add_argument('--mixing', default=False, help='Whether to train all the stations together')
-parser.add_argument('--trans', default=None, help='Whether to pre-transform data')
+                    help='Optional, name of the file in --model_dir containing '
+                         'weights to reload before training')  # 'best' or 'epoch_#'
+parser.add_argument('--trans', default=None,
+                    help='Whether to pre-transform data')
 
 def stabilityTest(model: nn.Module, loss_fn, test_loader: DataLoader, params: utils.Params, epoch: int, num=10):
     utils.load_checkpoint(params.model_dir + '/epoch_' + str(epoch-1) + '.pth.tar', model)
@@ -92,13 +99,27 @@ def train(model: nn.Module,
         hidden = model.init_hidden(batch_size)
         cell = model.init_cell(batch_size)
 
-        for t in range(params.train_window):
-            # if z_t is missing, replace it by output mu from the last time step
-            zero_index = (train_batch[t, :, 0] == 0)
-            if t > 0 and torch.sum(zero_index) > 0:
-                train_batch[t, zero_index, 0] = p[zero_index]
-            p, gama, hidden, cell = model(train_batch[t].unsqueeze_(0).clone(), idx, hidden, cell)
-            loss += loss_fn(p, gama, labels_batch[t])
+        if params.spline:
+            for t in range(params.train_window):
+                # if z_t is missing, replace it by output mu from the last
+                # time step
+                zero_index = (train_batch[t, :, 0] == 0)
+                if t > 0 and torch.sum(zero_index) > 0:
+                    train_batch[t, zero_index, 0] = p[zero_index]
+                spline_u, spline_beta, spline_gama, hidden, cell = model(
+                    train_batch[t].unsqueeze_(0).clone(), idx, hidden, cell)
+                loss += loss_fn(spline_u, spline_beta,
+                                spline_gama, labels_batch[t])
+        else:
+            for t in range(params.train_window):
+                # if z_t is missing, replace it by output mu from the last
+                # time step
+                zero_index = (train_batch[t, :, 0] == 0)
+                if t > 0 and torch.sum(zero_index) > 0:
+                    train_batch[t, zero_index, 0] = p[zero_index]
+                p, gama, hidden, cell = model(
+                    train_batch[t].unsqueeze_(0).clone(), idx, hidden, cell)
+                loss += loss_fn(p, gama, labels_batch[t])
 
         loss.backward()
         optimizer.step()
@@ -205,6 +226,7 @@ if __name__ == '__main__':
     params.model_dir = model_dir + '5'
     params.plot_dir = os.path.join(params.model_dir, 'figures')
     params.trans = None
+    params.spline = True
     # create missing directories
     try:
         os.makedirs(params.plot_dir)
@@ -230,15 +252,15 @@ if __name__ == '__main__':
 
     train_set = TrainDataset(data_dir, args.dataset, params.num_class)
     test_set = TestDataset(data_dir, args.dataset, params.num_class)
-    train_loader = DataLoader(train_set, batch_size=params.batch_size, num_workers=8) # modify 4 to 0
-    test_loader = DataLoader(test_set, batch_size=params.predict_batch, sampler=RandomSampler(test_set), num_workers=8) # modify 4 to 0
+    train_loader = DataLoader(train_set, batch_size=params.batch_size, num_workers=2) # modify 4 to 0
+    test_loader = DataLoader(test_set, batch_size=params.predict_batch, sampler=RandomSampler(test_set), num_workers=2) # modify 4 to 0
     logger.info('Loading complete.')
 
     logger.info(f'Model: \n{str(model)}')
     optimizer = optim.Adam(model.parameters(), lr=params.learning_rate)
 
     # fetch loss function
-    loss_fn = net.loss_fn_rou
+    loss_fn = net.loss_fn_crps
 
     # Train the model
     logger.info('Starting training for {} epoch(s)'.format(params.num_epochs))

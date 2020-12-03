@@ -95,7 +95,7 @@ def set_logger(log_path):
     file_handler = logging.FileHandler(log_path)
     file_handler.setFormatter(fmt)
     _logger.addHandler(file_handler)
-    # _logger.addHandler(TqdmHandler(fmt))
+    _logger.addHandler(TqdmHandler(fmt))
 
 
 def save_dict_to_json(d, json_path):
@@ -189,12 +189,12 @@ def get_metrics(sample_mu, labels, predict_start, samples=None, relative=False):
         metric['rou50'] = net.accuracy_ROU_(0.5, samples, labels[:, predict_start:],relative=True)
     return metric
 
-def update_metrics(raw_metrics, input_mu, input_sigma, sample_mu, labels, predict_start, samples=None, relative=False):
+def update_metrics(raw_metrics, sample_mu, labels, predict_start, samples=None, relative=False):
     raw_metrics['ND'] = raw_metrics['ND'] + net.accuracy_ND(sample_mu, labels[:, predict_start:], relative=relative)
     raw_metrics['RMSE'] = raw_metrics['RMSE'] + net.accuracy_RMSE(sample_mu, labels[:, predict_start:], relative=relative)
-    input_time_steps = input_mu.numel()
-    raw_metrics['test_loss'] = raw_metrics['test_loss'] + [
-        net.loss_fn(input_mu, input_sigma, labels[:, :predict_start]) * input_time_steps, input_time_steps]
+    # input_time_steps = input_mu.numel()
+    # raw_metrics['test_loss'] = raw_metrics['test_loss'] + [
+    #     net.loss_fn(input_mu, input_sigma, labels[:, :predict_start]) * input_time_steps, input_time_steps]
     if samples is not None:
         raw_metrics['rou90'] = raw_metrics['rou90'] + net.accuracy_ROU(0.9, samples, labels[:, predict_start:], relative=True)
         raw_metrics['rou50'] = raw_metrics['rou50'] + net.accuracy_ROU(0.5, samples, labels[:, predict_start:], relative=True)
@@ -208,7 +208,7 @@ def final_metrics(raw_metrics, sampling=False):
     summary_metric = {}
     summary_metric['ND'] = raw_metrics['ND'][0] / raw_metrics['ND'][1]
     summary_metric['RMSE'] = np.sqrt(raw_metrics['RMSE'][:-1] / raw_metrics['RMSE'][-1])
-    summary_metric['test_loss'] = (raw_metrics['test_loss'][0] / raw_metrics['test_loss'][1]).item()
+    # summary_metric['test_loss'] = (raw_metrics['test_loss'][0] / raw_metrics['test_loss'][1]).item()
     if sampling:
         summary_metric['rou90'] = raw_metrics['rou90'][0] / raw_metrics['rou90'][1]
         summary_metric['rou50'] = raw_metrics['rou50'][0] / raw_metrics['rou50'][1]

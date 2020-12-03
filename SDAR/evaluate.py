@@ -71,9 +71,13 @@ def evaluate(model, loss_fn, test_loader, params, plot_num=5, sample=True):
                 # zero_index = (test_batch[t, :, 0] == 0)
                 # if t > 0 and torch.sum(zero_index) > 0:
                 #     test_batch[t, zero_index, 0] = mu[zero_index]
-
-                u, beta, gama, hidden, cell = \
-                    model(test_batch[t].unsqueeze(0), id_batch, hidden, cell)
+                if params.spline:
+                    u, beta, gama, hidden, cell = \
+                        model(test_batch[t].unsqueeze(0),
+                              id_batch, hidden, cell)
+                else:
+                    mu, sigma, hidden, cell = model(test_batch[t].unsqueeze(0),
+                                                    id_batch, hidden, cell)
 
             if sample:
                 samples, sample_mu, _ = \

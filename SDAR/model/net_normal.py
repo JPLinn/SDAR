@@ -174,6 +174,15 @@ def loss_fn_rou(x0: Variable, gama: Variable, labels: Variable):
     rou_score = (rou75_score + rou25_score + rou50_score) / 3
     return rou_score
 
+def loss_fn_crps(x0: Variable, sigma: Variable, labels: Variable):
+    zeros_index = (labels != 0)
+    norm_labels = (labels - x0)/sigma
+    normal = torch.distributions.normal.Normal(
+        torch.zeros_like(x0), torch.ones_like(sigma))
+    crps = sigma*(norm_labels*(2*normal.cdf(norm_labels)-1) +
+                  2*torch.exp(normal.log_prob(norm_labels))-1/np.sqrt(np.pi))
+    return crps.mean()
+
 # if relative is set to True, metrics are not normalized by the scale of labels
 def accuracy_ND(mu: torch.Tensor, labels: torch.Tensor, relative=False):
     zero_index = (labels != 0)

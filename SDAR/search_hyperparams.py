@@ -44,7 +44,7 @@ def launch_training_job(search_range):
         setattr(model_param, k, v)
 
     pool_id, job_idx = multiprocessing.Process()._identity
-    gpu_id = gpu_ids[pool_id - 1]
+    gpu_id = gpu_ids[pool_id % 2 ]
 
     logger.info(f'Worker {pool_id} running {job_idx} using GPU {gpu_id}')
 
@@ -63,8 +63,7 @@ def launch_training_job(search_range):
     cmd = f'{PYTHON} train.py ' \
         f'--model-name={model_input} ' \
         f'--dataset={args.dataset} ' \
-        f'--data-folder={args.data_dir} ' \
-        f'--save-best '
+        f'--data-folder={args.data_dir} '
     if args.sampling:
         cmd += ' --sampling'
     if args.relative_metrics:
@@ -79,7 +78,8 @@ def start_pool(project_list, processes):
 
     pool = multiprocessing.Pool(processes)
     pool.map(launch_training_job, [(i, ) for i in project_list])
-
+    # for i in project_list:
+    #     pool.apply(launch_training_job, args=((i,)))
 
 def main():
     # Load the 'reference' parameters from parent_dir json file
@@ -103,7 +103,7 @@ def main():
     keys = sorted(search_params.keys())
     search_range = list(product(*[[*range(len(search_params[i]))] for i in keys]))
 
-    start_pool(search_range, len(gpu_ids))
+    start_pool(search_range, len(gpu_ids)*5)
 
 
 if __name__ == '__main__':

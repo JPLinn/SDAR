@@ -10,8 +10,8 @@ from torch.utils.data.sampler import RandomSampler
 from tqdm import tqdm
 
 import utils
-import model.net_beta as net
-# import model.net_normal as net
+# import model.net_beta as net
+import model.net_normal as net
 # import model.net_cauchy as net
 from evaluate import evaluate
 from dataloader import *
@@ -50,21 +50,21 @@ def stabilityTest(model: nn.Module, loss_fn, test_loader: DataLoader,
         'Epochs run out! Now start testing how stable the best epoch (%d) is '
         '!' % (epoch))
     crps_results = np.zeros(num)
-    # rou50_results = np.zeros(num)
-    # rou90_results = np.zeros(num)
-    # rc_results = np.zeros(num)
-    # sharp90_results = np.zeros(num)
-    # sharp50_results = np.zeros(num)
+    rou50_results = np.zeros(num)
+    rou90_results = np.zeros(num)
+    rc_results = np.zeros(num)
+    sharp90_results = np.zeros(num)
+    sharp50_results = np.zeros(num)
     for k in range(num):
-        # logger.info('Experiment %d' % (k + 1))
+        logger.info('Experiment %d' % (k + 1))
         results = evaluate(model, loss_fn, test_loader, params)
         crps_results[k] = results['crps']
+        rou50_results[k] = results['rou50']
+        rou90_results[k] = results['rou90']
+        rc_results[k] = results['rc']
+        sharp50_results[k] = results['sharp50']
+        sharp90_results[k] = results['sharp90']
     result_dict[id] = [crps_results.mean(), crps_results.std()]
-        # rou50_results[k] = results['rou50']
-        # rou90_results[k] = results['rou90']
-        # rc_results[k] = results['rc']
-        # sharp50_results[k] = results['sharp50']
-        # sharp90_results[k] = results['sharp90']
     # logger.info('The MEAN and STDERR of metrics (epoch %d) are:\n' % (epoch) +
     #             'CRPS: %.4f %.4f\n' % (
     #             crps_results.mean(), crps_results.std()) +
@@ -244,7 +244,7 @@ def start_train(model: nn.Module, params: utils.Params,
     optimizer = optim.Adam(model.parameters(), lr=params.learning_rate)
 
     # fetch loss function
-    loss_fn = net.loss_fn
+    loss_fn = net.loss_fn_crps
 
     utils.set_logger(os.path.join(params.model_dir, 'train.log'))
     logger.info('Staring training')
@@ -275,6 +275,7 @@ if __name__ == '__main__':
         tparams.model_dir = os.path.join(model_dir, 'ts' + str(i))
         tparams.plot_dir = os.path.join(tparams.model_dir, 'figures')
         tparams.trans = None
+        tparams.spline = False
         tparams.data_dir = os.path.join(data_dir, 'ts' + str(i))
         try:
             os.makedirs(tparams.plot_dir)
@@ -290,10 +291,12 @@ if __name__ == '__main__':
     pool.join()
     return_dict = dict(return_dict)
     print(return_dict)
+    logger.info(str(return_dict))
     crps_mean = 0
     for i in range(6):
         crps_mean += return_dict[i][0]
     crps_mean /= 6
     print('\nMean CRPS is %.4f'%crps_mean)
+    logger.info('\nMean CRPS is %.4f'%crps_mean)
 
 

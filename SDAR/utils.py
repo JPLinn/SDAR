@@ -95,7 +95,7 @@ def set_logger(log_path):
     file_handler = logging.FileHandler(log_path)
     file_handler.setFormatter(fmt)
     _logger.addHandler(file_handler)
-    _logger.addHandler(TqdmHandler(fmt))
+    # _logger.addHandler(TqdmHandler(fmt))
 
 
 def save_dict_to_json(d, json_path):

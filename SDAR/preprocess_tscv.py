@@ -100,7 +100,7 @@ if __name__ == '__main__':
 
     # df = df[df.index.hour < 8]  # truncate 24 hours to 8 hours
 
-    ids_covars = [1, 2, 3, 4, 5, 6, 7, 8, 9, 13, 14]
+    ids_covars = [13, 14]
 
     ref_months = np.array([31,28,31,30,31,30,31,31,30,31,30,31], dtype='int')
     ref_months = np.append(ref_months, ref_months)
@@ -117,9 +117,9 @@ if __name__ == '__main__':
             df[train_start:val_end]['power'].values, fourier_terms)
         tdf = df[df.index.hour < 8][train_start:val_end]
         covars = gen_covars(tdf, ids_covars)
-        prep_data(tdf, covars, name='power', lag=3)
-        prep_data(tdf, covars, train=False,
-                  name='power', lag=3)
+        prep_data(tdf[train_start:train_end], covars, name='fourier_resi', lag=3)
+        prep_data(tdf[val_start:val_end], covars, train=False,
+                  name='fourier_resi', lag=3)
         delta_t = timedelta(days=int(np.sum(ref_months[train_end.month-1])))
         train_start += delta_t
         train_end += delta_t

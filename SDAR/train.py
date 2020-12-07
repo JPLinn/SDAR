@@ -223,7 +223,7 @@ if __name__ == '__main__':
 
     params.relative_metrics = args.relative_metrics
     params.sampling = args.sampling
-    params.model_dir = model_dir + '5'
+    params.model_dir = model_dir + '1'
     params.plot_dir = os.path.join(params.model_dir, 'figures')
     params.trans = None
     params.spline = False
@@ -237,7 +237,7 @@ if __name__ == '__main__':
     cuda_exist = torch.cuda.is_available()
     # Set random seeds for reproducible experiments if necessary
     if cuda_exist:
-        params.device = torch.device('cuda:0')
+        params.device = torch.device('cuda:1')
         # torch.cuda.manual_seed(240)
         logger.info('Using Cuda...')
         model = net.Net(params).cuda(params.device)

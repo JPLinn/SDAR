@@ -9,10 +9,11 @@
     "test_predict_start": 40,
     "predict_steps": 4,
     "num_class": 1,
-    "cov_dim": 13,
+    "cov_dim": 4,
     "lstm_hidden_dim": 40,
     "embedding_dim": 20,
     "sample_times": 200,
     "lstm_dropout": 0.1,
-    "predict_batch": 256
+    "predict_batch": 256,
+    "num_spline": 50
 }

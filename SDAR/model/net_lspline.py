@@ -121,25 +121,25 @@ class Net(nn.Module):
                 decoder_hidden = hidden
                 decoder_cell = cell
                 for t in range(self.params.predict_steps):
-                    u_de, beta_ge, gama_de, decoder_hidden, decoder_cell = \
+                    u_de, beta_de, gama_de, decoder_hidden, decoder_cell = \
                         self(x[self.params.predict_start + t].unsqueeze(0),
                         id_batch, decoder_hidden, decoder_cell)
                     uniform = torch.distributions.uniform.Uniform(
                         torch.tensor([0.0], device='cuda:0'),
                         torch.tensor([1.0], device='cuda:0'))
-                    pred = torch.squeeze(uniform.sample([batch_size]))
-                    b = beta_ge - torch.nn.functional.pad(
-                        beta_ge, (1, 0), 'constant', 0)[:, :-1]
+                    pred_cdf = torch.squeeze(uniform.sample([batch_size]))
+                    b = beta_de - torch.nn.functional.pad(
+                        beta_de, (1, 0), 'constant', 0)[:, :-1]
                     d = torch.cumsum(
                         torch.nn.functional.pad(u_de, (1, 0), 'constant', 0),
                         dim=1)
                     d = d[:, :-1]
-                    bd = b*d
-                    ind = d[:, 1:].permute(1,0) < pred
-                    ind = ind.permute(1,0)
-                    k = torch.sum(ind*beta_ge[:,1:], dim=1) + beta_ge[:,0]
-                    pred = \
-                        (gama_de + torch.sum(ind*bd[:,1:], dim=1) + bd[:,0])/k
+                    ind = d[:, 1:].permute(1, 0) < pred_cdf
+                    ind = ind.permute(1, 0)
+                    b[:,1:] = ind*b[:,1:]
+                    delta_x = pred_cdf - d.permute(1, 0)
+                    delta_x = delta_x.permute(1, 0)
+                    pred = gama_de + torch.sum(b*delta_x, dim=1)
                     samples[j, :, t] = pred
                     if t < (self.params.predict_steps - 1):
                         x[self.params.predict_start + t + 1, :, 0] = pred

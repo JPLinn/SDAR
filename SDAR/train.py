@@ -11,9 +11,9 @@ from tqdm import tqdm
 
 import utils
 # import model.net_beta as net
-import model.net_normal as net
+# import model.net_normal as net
 # import model.net_cauchy as net
-# import model.net_lspline as net
+import model.net_lspline as net
 
 from evaluate import evaluate
 from dataloader import *
@@ -226,7 +226,7 @@ if __name__ == '__main__':
     params.model_dir = model_dir
     params.plot_dir = os.path.join(params.model_dir, 'figures')
     params.trans = None
-    params.spline = False
+    params.spline = True
     # create missing directories
     try:
         os.makedirs(params.plot_dir)

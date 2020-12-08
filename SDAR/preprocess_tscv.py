@@ -6,6 +6,7 @@ import numpy as np
 import math
 import random
 from tqdm import trange
+import heapq
 
 from io import BytesIO
 from urllib.request import urlopen
@@ -72,6 +73,21 @@ def cal_fourier_resi(raw, terms):
                          np.imag(spec[term]) * np.sin(w * t))
     fit = fit / 8760 + raw[:8760].mean()
     return raw - fit
+
+def cal_fourier_resi_adaptive(source, dest, num_terms):
+    spec = np.fft.fft(source - source.mean())
+    fit = np.zeros(source.size + dest.size)
+    t = np.arange(source.size + dest.size)
+    magSpec = np.power(np.abs(spec),2)
+    terms = heapq.nlargest(num_terms, range(len(magSpec)), magSpec.__getitem__)
+    terms = np.array(terms)
+    terms = terms[terms < 5000]
+    for term in terms:
+        w = 2 * np.pi * term / source.size
+        fit = fit + 2 * (np.real(spec[term]) * np.cos(w * t) -
+                         np.imag(spec[term]) * np.sin(w * t))
+    fit = fit / source.size + source.mean()
+    return dest - fit[source.size:]
 
 
 if __name__ == '__main__':

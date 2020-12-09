@@ -13,7 +13,8 @@ import utils
 # import model.net_beta as net
 # import model.net_normal as net
 # import model.net_cauchy as net
-import model.net_lspline as net
+# import model.net_lspline as net
+import model.net_tsp as net
 
 from evaluate import evaluate
 from dataloader import *
@@ -162,6 +163,7 @@ def train_and_evaluate(model: nn.Module,
     train_len = len(train_loader)
     CRPS_summary = np.zeros(params.num_epochs)
     loss_summary = np.zeros((train_len * params.num_epochs))
+    ending_ind = int(0)
     for epoch in range(params.num_epochs):
         logger.info('Epoch {}/{}'.format(epoch + 1, params.num_epochs))
         loss_summary[epoch * train_len:(epoch + 1) * train_len] = train(model, optimizer, loss_fn, train_loader,
@@ -176,10 +178,14 @@ def train_and_evaluate(model: nn.Module,
                                'optim_dict': optimizer.state_dict()},
                               epoch=epoch,
                               is_best=is_best,
-                              checkpoint=params.model_dir)
+                              checkpoint=params.save_model_dir)
 
         if is_best:
             logger.info('- Found new best CRPS')
+            if (best_test_CRPS[1] - CRPS_summary[epoch]) < params.epoch_gap:
+                ending_ind += 1
+            else:
+                ending_ind = int(0)
             best_test_CRPS = (epoch+1, CRPS_summary[epoch])
             best_json_path = os.path.join(params.model_dir, 'metrics_test_best_weights.json')
             utils.save_dict_to_json(test_metrics, best_json_path)
@@ -191,6 +197,10 @@ def train_and_evaluate(model: nn.Module,
 
         last_json_path = os.path.join(params.model_dir, 'metrics_test_last_weights.json')
         utils.save_dict_to_json(test_metrics, last_json_path)
+
+        if (ending_ind >= 3) | ((epoch - best_test_CRPS[0]) >= params.max_delay_epochs):
+            logger.info('CRPS has not decrease anymore!')
+            break
 
     if args.save_best:
         f = open('./param_search.txt', 'w')
@@ -209,7 +219,7 @@ def train_and_evaluate(model: nn.Module,
         utils.plot_all_epoch(CRPS_summary, print_params + '_CRPS', location=params.plot_dir)
         utils.plot_all_epoch(loss_summary, print_params + '_loss', location=params.plot_dir)
 
-    stabilityTest(model, loss_fn, test_loader, params, best_test_CRPS[0])
+    # stabilityTest(model, loss_fn, test_loader, params, best_test_CRPS[0])
 
 if __name__ == '__main__':
 
@@ -225,11 +235,17 @@ if __name__ == '__main__':
     params.sampling = args.sampling
     params.model_dir = model_dir
     params.plot_dir = os.path.join(params.model_dir, 'figures')
+    params.save_model_dir = os.path.join(params.model_dir, 'epochs')
+
     params.trans = None
-    params.spline = True
+    params.spline = False
     # create missing directories
     try:
         os.makedirs(params.plot_dir)
+    except FileExistsError:
+        pass
+    try:
+        os.makedirs(params.save_model_dir)
     except FileExistsError:
         pass
 
@@ -247,20 +263,20 @@ if __name__ == '__main__':
         logger.info('Not using cuda...')
         model = net.Net(params)
 
-    utils.set_logger(os.path.join(model_dir, 'train.log'))
+    utils.set_logger(os.path.join(params.model_dir, 'train.log'))
     logger.info('Loading the datasets...')
 
     train_set = TrainDataset(data_dir, args.dataset, params.num_class)
     test_set = TestDataset(data_dir, args.dataset, params.num_class)
-    train_loader = DataLoader(train_set, batch_size=params.batch_size, num_workers=4) # modify 4 to 0
-    test_loader = DataLoader(test_set, batch_size=params.predict_batch, sampler=RandomSampler(test_set), num_workers=4) # modify 4 to 0
+    train_loader = DataLoader(train_set, batch_size=params.batch_size, num_workers=16) # modify 4 to 0
+    test_loader = DataLoader(test_set, batch_size=params.predict_batch, sampler=RandomSampler(test_set), num_workers=16) # modify 4 to 0
     logger.info('Loading complete.')
 
     logger.info(f'Model: \n{str(model)}')
     optimizer = optim.Adam(model.parameters(), lr=params.learning_rate)
 
     # fetch loss function
-    loss_fn = net.loss_fn_crps
+    loss_fn = net.loss_fn
 
     # Train the model
     logger.info('Starting training for {} epoch(s)'.format(params.num_epochs))

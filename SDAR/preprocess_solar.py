@@ -119,9 +119,9 @@ if __name__ == '__main__':
     data_frame = pd.read_csv(csv_path, sep=",", index_col=0, parse_dates=True)
     data_frame.fillna(0, inplace=True)
 
-    # fit = calResi(data_frame,np.array((1,2,364,365,366,729,730,731)))
+    fit = calResi(data_frame,np.array((1,2,364,365,366,729,730,731)))
     # fit = calResi(data_frame, np.array((1, 2, 3, 363, 364, 365, 366, 367, 728, 729, 730, 731, 732)))
-    fit = calResi(data_frame, np.array((1, 365, 730)))
+    # fit = calResi(data_frame, np.array((1, 365, 730)))
     data_frame['resi'] = data_frame['power'] - fit
 
     # remove extreme values from power data to prepare for the next transformations
@@ -143,5 +143,5 @@ if __name__ == '__main__':
     train_data = df[train_start:train_end]
     test_data = df[test_start:test_end]
 
-    prep_data(train_data, covariates, data_start, name='resi', lag=3)
-    prep_data(test_data, covariates, data_start, train=False, name='resi', lag=3)
+    prep_data(train_data, covariates, data_start, name='power', lag=3)
+    prep_data(test_data, covariates, data_start, train=False, name='power', lag=3)

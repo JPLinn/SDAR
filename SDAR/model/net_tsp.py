@@ -28,9 +28,9 @@ class Net(nn.Module):
         '''
         super(Net, self).__init__()
         self.params = params
-        self.embedding = nn.Embedding(params.num_class, params.embedding_dim)
+        # self.embedding = nn.Embedding(params.num_class, params.embedding_dim)
 
-        self.lstm = nn.LSTM(input_size=1 + params.cov_dim + params.embedding_dim,
+        self.lstm = nn.LSTM(input_size=1 + params.cov_dim,
                             hidden_size=params.lstm_hidden_dim,
                             num_layers=params.lstm_layers,
                             bias=True,
@@ -73,9 +73,12 @@ class Net(nn.Module):
             hidden ([lstm_layers, batch_size, lstm_hidden_dim]): LSTM h from time step t
             cell ([lstm_layers, batch_size, lstm_hidden_dim]): LSTM c from time step t
         '''
-        onehot_embed = self.embedding(idx)  # TODO: is it possible to do this only once per window instead of per step?
-        lstm_input = torch.cat((x, onehot_embed), dim=2)
-        output, (hidden, cell) = self.lstm(lstm_input, (hidden, cell))
+        # onehot_embed = self.embedding(idx)  # TODO: is it possible to do this only once per window instead of per step?
+        # lstm_input = torch.cat((x, onehot_embed), dim=2)
+        # output, (hidden, cell) = self.lstm(lstm_input, (hidden, cell))
+        output, (hidden, cell) = self.lstm(x, (hidden, cell))
+        while torch.isnan(hidden).sum() != 0:  # detect possible inf values
+            print('nihao')
         # use h from all three layers to calculate mu and sigma
         hidden_permute = hidden.permute(1, 2, 0).contiguous().view(hidden.shape[1], -1)
 
@@ -107,10 +110,9 @@ class Net(nn.Module):
                 for t in range(self.params.predict_steps):
                     theta_de, reci_n_de, decoder_hidden, decoder_cell = self(x[self.params.predict_start + t].unsqueeze(0),
                                                                        id_batch, decoder_hidden, decoder_cell)
-                    n_de = torch.reciprocal(reci_n_de)
                     uniform = torch.distributions.uniform.Uniform(
-                        torch.tensor([0.0], device='cuda'),
-                        torch.tensor([1.0], device='cuda'))
+                        torch.tensor([0.0], device=self.params.device),
+                        torch.tensor([1.0], device=self.params.device))
                     pred_cdf = torch.squeeze(uniform.sample([batch_size]))
                     pred = torch.zeros_like(pred_cdf)
                     ind = pred_cdf < theta_de
@@ -153,17 +155,16 @@ def loss_fn(theta: Variable, reci_n: Variable, labels: Variable):
     Returns:
         loss: (Variable) average log-likelihood loss across the batch
     '''
-    zero_index = (labels != 0)
-    ind = labels[zero_index] < theta[zero_index]
+    # zero_index = (labels != 0)
+    ind = labels < theta
     n = torch.reciprocal(reci_n)
-    likelihood_low = n[zero_index][ind]*torch.pow(
-        labels[zero_index][ind]/theta[zero_index][ind],
-        n[zero_index][ind] - 1)
-    likelihood_up = n[zero_index][ind]*torch.pow(
-        (1-labels[zero_index][ind])/(1-theta[zero_index][ind]),
-        n[zero_index][ind] - 1)
-
-    likelihood = torch.cat(likelihood_low, likelihood_up)
+    adj_labels = torch.zeros_like(labels)
+    adj_theta = torch.zeros_like(theta)
+    adj_theta[ind] = theta[ind]
+    adj_theta[~ind] = 1 - theta[~ind]
+    adj_labels[ind] = labels[ind]
+    adj_labels[~ind] = 1 - labels[~ind]
+    likelihood = -torch.log(reci_n) + (n-1)*(torch.log(adj_labels)-torch.log(adj_theta))
     x = -torch.mean(likelihood)
     if torch.isnan(x):
         print('likelihood:')
@@ -195,14 +196,15 @@ def loss_fn_crps(theta: Variable, reci_n: Variable, labels: Variable):
     const_term = labels - theta
     const_term[ind] = -const_term[ind]
     quad_term = (torch.pow(theta, 3) + torch.pow(1-theta, 3))/(2*n+1)
-    upper = torch.zeros_like(theta)
-    lower = torch.zeros_like(theta)
-    lower[~ind] = 1 - theta[~ind]
-    lower[ind] = theta[ind]
-    upper[~ind] = 1 - labels[~ind]
-    upper[ind] = labels[ind]
-    linear_term = 2*(torch.pow(upper, n+1)/torch.pow(lower, n-1)
-                     - torch.pow(lower, 2))/(n+1)
+    adj_labels = torch.zeros_like(labels)
+    adj_theta = torch.zeros_like(theta)
+    adj_theta[~ind] = 1 - theta[~ind]
+    adj_theta[ind] = theta[ind]
+    adj_labels[~ind] = 1 - labels[~ind]
+    adj_labels[ind] = labels[ind]
+    linear_term = 2*(torch.pow(adj_labels, n+1)/(torch.pow(adj_theta+0.01, n-1))
+                     - torch.pow(adj_labels, 2))/(n+1)
+    # linear_term = 2*(torch.pow(adj_labels, 2) - torch.pow(adj_labels, 2))/(n+1)
     crps = const_term + quad_term + linear_term
     return torch.mean(crps)
 

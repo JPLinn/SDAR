@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import logging
 import argparse
 import multiprocessing
@@ -10,6 +11,8 @@ from subprocess import check_call
 import numpy as np
 import utils
 
+import pickle
+import time
 
 logger = logging.getLogger('DeepAR.Searcher')
 
@@ -28,7 +31,7 @@ parser.add_argument('--model-name', default='param_search', help='Parent directo
 parser.add_argument('--relative-metrics', action='store_true', help='Whether to normalize the metrics by label scales')
 parser.add_argument('--gpu-ids', nargs='+', default=[0,1], type=int, help='GPU ids')
 parser.add_argument('--sampling', help='Whether to do ancestral sampling during evaluation', default=True)
-
+parser.add_argument('--job-dir', default='2', help='the directory of specific job')
 
 def launch_training_job(search_range):
     """Launch training of the model with a set of hyper-parameters in parent_dir/job_name
@@ -49,8 +52,8 @@ def launch_training_job(search_range):
     logger.info(f'Worker {pool_id} running {job_idx} using GPU {gpu_id}')
 
     # Create a new folder in parent_dir with unique_name 'job_name'
-    model_name = os.path.join(model_dir, model_param_list)
-    model_input = os.path.join(args.model_name, model_param_list)
+    model_name = os.path.join(model_dir, args.job_dir, model_param_list)
+    model_input = os.path.join(args.model_name, args.job_dir, model_param_list)
     if not os.path.exists(model_name):
         os.makedirs(model_name)
 
@@ -85,6 +88,8 @@ def main():
     # Load the 'reference' parameters from parent_dir json file
     global param_template, gpu_ids, args, search_params, model_dir
 
+    time_start = time.time()
+
     args = parser.parse_args()
     model_dir = os.path.join('experiments', args.model_name)
     json_file = os.path.join(model_dir, 'params.json')
@@ -97,14 +102,41 @@ def main():
     # Perform hypersearch over parameters listed below
     search_params = {
         'lstm_dropout': np.arange(0, 0.501, 0.1, dtype=np.float32).tolist(),
-        'lstm_hidden_dim': np.arange(5, 60, 10, dtype=np.int).tolist()
+        'lstm_hidden_dim': np.arange(16, 31, 2, dtype=np.int).tolist()
+        # 'num_spline': np.arange(5,66,10,dtype=int).tolist()
     }
 
     keys = sorted(search_params.keys())
     search_range = list(product(*[[*range(len(search_params[i]))] for i in keys]))
 
-    start_pool(search_range, len(gpu_ids)*5)
+    start_pool(search_range, len(gpu_ids)*4)
 
+    results = np.empty((6,len(search_range)))  # 6 is the number of metrics
+    count = 0
+    for i in search_range:
+        params = {k: search_params[k][i[idx]] for idx, k in enumerate(sorted(search_params.keys()))}
+        model_param_list = '-'.join('_'.join((k, f'{v:.2f}')) for k, v in params.items())
+        model_name = os.path.join(model_dir, model_param_list)
+        json_path = os.path.join(model_name, 'metrics_test_best_weights.json')
+        with open(json_path) as f:
+            temp = json.load(f)
+            results[:, count] = np.array(list(temp.values()))
+            count += 1
+
+    save_name = os.path.join(model_dir, '2.1__' + '-'.join(k for k in search_params.keys()))
+    with open(save_name, 'wb') as f:
+        pickle.dump(search_params, f)
+        pickle.dump(results, f)
+
+    time_end = time.time()
+
+    print('time cost:', (time_end - time_start)/60, 'min')
+    # X, Y = np.meshgrid(search_params['lstm_dropout'], search_params['lstm_hidden_dim'])
+    # crps = results[0,:].reshape(-1,len(search_params['lstm_hidden_dim'])).T
+    # fig = plt.figure()
+    # ax3 = plt.axes(projection='3d')
+    # ax3.plot_surface(X, Y, crps)
+    # plt.show()
 
 if __name__ == '__main__':
     main()

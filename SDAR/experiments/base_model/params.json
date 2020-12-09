@@ -15,5 +15,7 @@
     "sample_times": 200,
     "lstm_dropout": 0.1,
     "predict_batch": 256,
-    "num_spline": 50
+    "num_spline": 10,
+    "epoch_gap": 0.0001,
+    "max_delay_epochs": 20
 }

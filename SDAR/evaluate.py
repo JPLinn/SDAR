@@ -49,7 +49,7 @@ def evaluate(model, loss_fn, test_loader, params, plot_num=5, sample=True):
         plot_batch = np.random.randint(len(test_loader) - 1)
 
         summary_metric = {}
-        raw_metrics = utils.init_metrics(sample=sample)
+        raw_metrics = utils.init_metrics(dev=params.device, sample=sample)
 
         # Test_loader:
         # test_batch ([batch_size, train_window, 1+cov_dim]): z_{0:T-1} + x_{1:T}, note that z_0 = 0;

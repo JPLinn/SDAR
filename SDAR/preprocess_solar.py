@@ -129,8 +129,8 @@ if __name__ == '__main__':
     data_frame['power'][data_frame['power']<=0] = 0.0001
 
     data_frame['logistic'] = -np.log(1 / data_frame['power'] - 1)
-    data_frame['logistic'][np.isposinf(data_frame['logistic'])] = 6.9
-    data_frame['logistic'][np.isneginf(data_frame['logistic'])] = -6.9
+    # data_frame['logistic'][np.isposinf(data_frame['logistic'])] = 6.9
+    # data_frame['logistic'][np.isneginf(data_frame['logistic'])] = -6.9
 
     data_frame['abssig'] = (2*data_frame['power']-1)/(1-np.abs(2*data_frame['power']-1))
 

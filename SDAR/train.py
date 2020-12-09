@@ -15,6 +15,8 @@ import utils
 # import model.net_cauchy as net
 # import model.net_lspline as net
 import model.net_tsp as net
+# import model.net_tln as net
+# import model.net_log_normal as net
 
 from evaluate import evaluate
 from dataloader import *
@@ -233,7 +235,7 @@ if __name__ == '__main__':
 
     params.relative_metrics = args.relative_metrics
     params.sampling = args.sampling
-    params.model_dir = model_dir
+    params.model_dir = model_dir + '4'
     params.plot_dir = os.path.join(params.model_dir, 'figures')
     params.save_model_dir = os.path.join(params.model_dir, 'epochs')
 
@@ -267,9 +269,9 @@ if __name__ == '__main__':
     logger.info('Loading the datasets...')
 
     train_set = TrainDataset(data_dir, args.dataset, params.num_class)
-    test_set = TestDataset(data_dir, args.dataset, params.num_class)
-    train_loader = DataLoader(train_set, batch_size=params.batch_size, num_workers=16) # modify 4 to 0
-    test_loader = DataLoader(test_set, batch_size=params.predict_batch, sampler=RandomSampler(test_set), num_workers=16) # modify 4 to 0
+    vali_set = ValiDataset(data_dir, args.dataset, params.num_class)
+    train_loader = DataLoader(train_set, batch_size=params.batch_size, num_workers=0) # modify 4 to 0
+    vali_loader = DataLoader(vali_set, batch_size=params.predict_batch, sampler=RandomSampler(vali_set), num_workers=0) # modify 4 to 0
     logger.info('Loading complete.')
 
     logger.info(f'Model: \n{str(model)}')
@@ -280,4 +282,4 @@ if __name__ == '__main__':
 
     # Train the model
     logger.info('Starting training for {} epoch(s)'.format(params.num_epochs))
-    train_and_evaluate(model, train_loader, test_loader, optimizer, loss_fn, params, args.restore_file)
+    train_and_evaluate(model, train_loader, vali_loader, optimizer, loss_fn, params, args.restore_file)

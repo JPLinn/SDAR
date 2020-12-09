@@ -23,7 +23,8 @@ logger = logging.getLogger('DeepAR.Net')
 class Net(nn.Module):
     def __init__(self, params):
         '''
-        We define a recurrent network that predicts the future values of a time-dependent variable based on
+        We define a recurrent network that predicts the future values of a
+        time-dependent variable based on
         past inputs and covariates.
         '''
         super(Net, self).__init__()
@@ -42,7 +43,8 @@ class Net(nn.Module):
                             bias=True,
                             batch_first=False,
                             dropout=params.lstm_dropout)'''
-        # initialize LSTM forget gate bias to be 1 as recommanded by http://proceedings.mlr.press/v37/jozefowicz15.pdf
+        # initialize LSTM forget gate bias to be 1 as recommanded by
+        # http://proceedings.mlr.press/v37/jozefowicz15.pdf
         for names in self.lstm._all_weights:
             for name in filter(lambda n: "bias" in n, names):
                 bias = getattr(self.lstm, name)
@@ -52,12 +54,16 @@ class Net(nn.Module):
 
         self.relu = nn.ReLU()
 
-        # self.distribution_prep = nn.Linear(params.lstm_hidden_dim * params.lstm_layers, 1)
-        # self.distribution_pregama = nn.Linear(params.lstm_hidden_dim * params.lstm_layers, 1)
+        # self.distribution_prep = nn.Linear(params.lstm_hidden_dim *
+        # params.lstm_layers, 1)
+        # self.distribution_pregama = nn.Linear(params.lstm_hidden_dim *
+        # params.lstm_layers, 1)
         # self.distribution_p = nn.Sigmoid()
         # self.distribution_gama = nn.Softplus()
-        self.distribution_mu = nn.Linear(params.lstm_hidden_dim * params.lstm_layers, 1)
-        self.distribution_pre_sigma = nn.Linear(params.lstm_hidden_dim * params.lstm_layers, 1)
+        self.distribution_mu = nn.Linear(
+            params.lstm_hidden_dim * params.lstm_layers, 1)
+        self.distribution_pre_sigma = nn.Linear(
+            params.lstm_hidden_dim * params.lstm_layers, 1)
         self.distribution_sigma = nn.Softplus()
 
     def forward(self, x, idx, hidden, cell):
@@ -66,27 +72,35 @@ class Net(nn.Module):
         Args:
             x: ([1, batch_size, 1+cov_dim]): z_{t-1} + x_t, note that z_0 = 0
             idx ([1, batch_size]): one integer denoting the time series id
-            hidden ([lstm_layers, batch_size, lstm_hidden_dim]): LSTM h from time step t-1
-            cell ([lstm_layers, batch_size, lstm_hidden_dim]): LSTM c from time step t-1
+            hidden ([lstm_layers, batch_size, lstm_hidden_dim]): LSTM h from
+            time step t-1
+            cell ([lstm_layers, batch_size, lstm_hidden_dim]): LSTM c from
+            time step t-1
         Returns:
             mu ([batch_size]): estimated mean of z_t
             sigma ([batch_size]): estimated standard deviation of z_t
-            hidden ([lstm_layers, batch_size, lstm_hidden_dim]): LSTM h from time step t
-            cell ([lstm_layers, batch_size, lstm_hidden_dim]): LSTM c from time step t
+            hidden ([lstm_layers, batch_size, lstm_hidden_dim]): LSTM h from
+            time step t
+            cell ([lstm_layers, batch_size, lstm_hidden_dim]): LSTM c from
+            time step t
         '''
-        # onehot_embed = self.embedding(idx)  # TODO: is it possible to do this only once per window instead of per step?
+        # onehot_embed = self.embedding(idx)  # TODO: is it possible to do
+        #  this only once per window instead of per step?
         # lstm_input = torch.cat((x, onehot_embed), dim=2)
         # output, (hidden, cell) = self.lstm(lstm_input, (hidden, cell))
         output, (hidden, cell) = self.lstm(x, (hidden, cell))
 
         # use h from all three layers to calculate mu and sigma
-        hidden_permute = hidden.permute(1, 2, 0).contiguous().view(hidden.shape[1], -1)
+        hidden_permute = hidden.permute(1, 2, 0).contiguous().view(
+            hidden.shape[1], -1)
 
         #### settings of beta distribution
         # pre_p = self.distribution_prep(hidden_permute)
-        # p = self.distribution_p(pre_p) # sigmoid to make sure p value in [0, 1]
+        # p = self.distribution_p(pre_p) # sigmoid to make sure p value in [
+        # 0, 1]
         # pre_gama = self.distribution_pregama(hidden_permute)
-        # gama = self.distribution_gama(pre_gama)  # softplus to make sure standard deviation is positive
+        # gama = self.distribution_gama(pre_gama)  # softplus to make sure
+        # standard deviation is positive
 
         mu = self.distribution_mu(hidden_permute)
         pre_sigma = self.distribution_pre_sigma(hidden_permute)
@@ -95,24 +109,31 @@ class Net(nn.Module):
         return torch.squeeze(mu), torch.squeeze(sigma), hidden, cell
 
     def init_hidden(self, input_size):
-        return torch.zeros(self.params.lstm_layers, input_size, self.params.lstm_hidden_dim, device=self.params.device)
+        return torch.zeros(self.params.lstm_layers, input_size,
+                           self.params.lstm_hidden_dim,
+                           device=self.params.device)
 
     def init_cell(self, input_size):
-        return torch.zeros(self.params.lstm_layers, input_size, self.params.lstm_hidden_dim, device=self.params.device)
+        return torch.zeros(self.params.lstm_layers, input_size,
+                           self.params.lstm_hidden_dim,
+                           device=self.params.device)
 
     def test(self, x, id_batch, hidden, cell, sampling=False):
         batch_size = x.shape[1]
         if sampling:
-            samples = torch.zeros(self.params.sample_times, batch_size, self.params.predict_steps,
+            samples = torch.zeros(self.params.sample_times, batch_size,
+                                  self.params.predict_steps,
                                   device=self.params.device)
             for j in range(self.params.sample_times):
                 decoder_hidden = hidden
                 decoder_cell = cell
                 for t in range(self.params.predict_steps):
-                    mu_de, sigma_de, decoder_hidden, decoder_cell = self(x[self.params.predict_start + t].unsqueeze(0),
-                                                                       id_batch, decoder_hidden, decoder_cell)
+                    mu_de, sigma_de, decoder_hidden, decoder_cell = self(
+                        x[self.params.predict_start + t].unsqueeze(0),
+                        id_batch, decoder_hidden, decoder_cell)
                     # gama_de[(p_de * gama_de < 1) & (gama_de < 2)] = 3
-                    log_normal = torch.distributions.log_normal.LogNormal(mu_de, sigma_de)
+                    log_normal = torch.distributions.log_normal.LogNormal(mu_de,
+                                                                          sigma_de)
                     pred = log_normal.sample()  # not scaled
 
                     ind = pred > 1
@@ -134,11 +155,14 @@ class Net(nn.Module):
         else:
             decoder_hidden = hidden
             decoder_cell = cell
-            sample_mu = torch.zeros(batch_size, self.params.predict_steps, device=self.params.device)
-            sample_sigma = torch.zeros(batch_size, self.params.predict_steps, device=self.params.device)
+            sample_mu = torch.zeros(batch_size, self.params.predict_steps,
+                                    device=self.params.device)
+            sample_sigma = torch.zeros(batch_size, self.params.predict_steps,
+                                       device=self.params.device)
             for t in range(self.params.predict_steps):
-                mu_de, sigma_de, decoder_hidden, decoder_cell = self(x[self.params.predict_start + t].unsqueeze(0),
-                                                                   id_batch, decoder_hidden, decoder_cell)
+                mu_de, sigma_de, decoder_hidden, decoder_cell = self(
+                    x[self.params.predict_start + t].unsqueeze(0),
+                    id_batch, decoder_hidden, decoder_cell)
                 sample_mu[:, t] = mu_de
                 sample_sigma[:, t] = sigma_de
                 if t < (self.params.predict_steps - 1):
@@ -148,17 +172,22 @@ class Net(nn.Module):
 
 def loss_fn(mu: Variable, sigma: Variable, labels: Variable):
     '''
-    Compute using gaussian the log-likehood which needs to be maximized. Ignore time steps where labels are missing.
+    Compute using gaussian the log-likehood which needs to be maximized.
+    Ignore time steps where labels are missing.
     Args:
         mu: (Variable) dimension [batch_size] - estimated mean at time step t
-        sigma: (Variable) dimension [batch_size] - estimated standard deviation at time step t
+        sigma: (Variable) dimension [batch_size] - estimated standard
+        deviation at time step t
         labels: (Variable) dimension [batch_size] z_t
     Returns:
         loss: (Variable) average log-likelihood loss across the batch
     '''
     zero_index = (labels != 0)
-    distribution = torch.distributions.log_normal.LogNormal(mu[zero_index], sigma[zero_index])
-    likelihood = distribution.log_prob(labels[zero_index]) + (1-distribution.cdf(1))*labels[zero_index]/2
+    distribution = torch.distributions.log_normal.LogNormal(mu[zero_index],
+                                                            sigma[zero_index])
+    likelihood = distribution.log_prob(labels[zero_index]) + \
+                 torch.log(1 - distribution.cdf(torch.tensor(1.0, device=labels.device))) \
+                 + torch.log(labels[zero_index] / 2)
     x = -torch.mean(likelihood)
     if torch.isnan(x):
         print('likelihood:')
@@ -171,27 +200,34 @@ def loss_fn(mu: Variable, sigma: Variable, labels: Variable):
         print(labels.cpu().detach().numpy())
     return -torch.mean(likelihood)
 
+
 def loss_fn_rou(x0: Variable, gama: Variable, labels: Variable):
     zero_index = (labels != 0)
     rou50_score = torch.mean(torch.abs(labels - x0)).item()
-    distribution = torch.distributions.cauchy.Cauchy(x0[zero_index], gama[zero_index])
+    distribution = torch.distributions.cauchy.Cauchy(x0[zero_index],
+                                                     gama[zero_index])
     rou75_diff = labels - distribution.icdf(torch.tensor(0.75))
-    rou75_score = 2 * (0.75 * torch.sum(rou75_diff[rou75_diff > 0]) - 0.25 * torch.sum(
-        rou75_diff[rou75_diff < 0])) / labels.numel()
+    rou75_score = 2 * (
+                0.75 * torch.sum(rou75_diff[rou75_diff > 0]) - 0.25 * torch.sum(
+            rou75_diff[rou75_diff < 0])) / labels.numel()
     rou25_diff = labels - distribution.icdf(torch.tensor(.25))
-    rou25_score = 2 * (0.25 * torch.sum(rou25_diff[rou25_diff > 0]) - 0.75 * torch.sum(
-        rou25_diff[rou25_diff < 0])) / labels.numel()
+    rou25_score = 2 * (
+                0.25 * torch.sum(rou25_diff[rou25_diff > 0]) - 0.75 * torch.sum(
+            rou25_diff[rou25_diff < 0])) / labels.numel()
     rou_score = (rou75_score + rou25_score + rou50_score) / 3
     return rou_score
 
+
 def loss_fn_crps(x0: Variable, sigma: Variable, labels: Variable):
     zeros_index = (labels != 0)
-    norm_labels = (labels - x0)/sigma
+    norm_labels = (labels - x0) / sigma
     normal = torch.distributions.normal.Normal(
         torch.zeros_like(x0), torch.ones_like(sigma))
-    crps = sigma*(norm_labels*(2*normal.cdf(norm_labels)-1) +
-                  2*torch.exp(normal.log_prob(norm_labels))-1/np.sqrt(np.pi))
+    crps = sigma * (norm_labels * (2 * normal.cdf(norm_labels) - 1) +
+                    2 * torch.exp(normal.log_prob(norm_labels)) - 1 / np.sqrt(
+                np.pi))
     return crps.mean()
+
 
 # if relative is set to True, metrics are not normalized by the scale of labels
 def accuracy_ND(mu: torch.Tensor, labels: torch.Tensor, relative=False):
@@ -207,9 +243,11 @@ def accuracy_ND(mu: torch.Tensor, labels: torch.Tensor, relative=False):
 
 def accuracy_RMSE(mu: torch.Tensor, labels: torch.Tensor, relative=False):
     # zero_index = (labels != 0)
-    diff = torch.sum(torch.mul((mu - labels), (mu - labels)), dim=0).cpu().detach().numpy()
+    diff = torch.sum(torch.mul((mu - labels), (mu - labels)),
+                     dim=0).cpu().detach().numpy()
     # if relative:
-    #     return [diff, torch.sum(zero_index).item(), torch.sum(zero_index).item()]
+    #     return [diff, torch.sum(zero_index).item(), torch.sum(
+    #     zero_index).item()]
     # else:
     #     summation = torch.sum(torch.abs(labels[zero_index])).item()
     #     if summation == 0:
@@ -219,7 +257,8 @@ def accuracy_RMSE(mu: torch.Tensor, labels: torch.Tensor, relative=False):
     return diff
 
 
-def accuracy_ROU(rou: float, samples: torch.Tensor, labels: torch.Tensor, relative=False):
+def accuracy_ROU(rou: float, samples: torch.Tensor, labels: torch.Tensor,
+                 relative=False):
     numerator = 0
     denominator = 0
     pred_samples = samples.shape[0]
@@ -227,10 +266,13 @@ def accuracy_ROU(rou: float, samples: torch.Tensor, labels: torch.Tensor, relati
         zero_index = (labels[:, t] != 0)
         if zero_index.numel() > 0:
             rou_th = math.ceil(pred_samples * (1 - rou))
-            rou_pred = torch.topk(samples[:, zero_index, t], dim=0, k=rou_th)[0][-1, :]
+            rou_pred = torch.topk(samples[:, zero_index, t], dim=0, k=rou_th)[
+                           0][-1, :]
             abs_diff = labels[:, t][zero_index] - rou_pred
-            numerator += 2 * (torch.sum(rou * abs_diff[labels[:, t][zero_index] > rou_pred]) - torch.sum(
-                (1 - rou) * abs_diff[labels[:, t][zero_index] <= rou_pred])).item()
+            numerator += 2 * (torch.sum(rou * abs_diff[
+                labels[:, t][zero_index] > rou_pred]) - torch.sum(
+                (1 - rou) * abs_diff[
+                    labels[:, t][zero_index] <= rou_pred])).item()
             denominator += torch.sum(labels[:, t][zero_index]).item()
     if relative:
         return [numerator, torch.sum(labels != 0).item()]
@@ -240,7 +282,9 @@ def accuracy_ROU(rou: float, samples: torch.Tensor, labels: torch.Tensor, relati
 
 def accuracy_CRPS(samples: torch.Tensor, labels: torch.Tensor):
     samples_permute = samples.permute(1, 2, 0)
-    numerator = ps.crps_ensemble(labels.cpu().detach().numpy(), samples_permute.cpu().detach().numpy()).sum(axis=0)
+    numerator = ps.crps_ensemble(labels.cpu().detach().numpy(),
+                                 samples_permute.cpu().detach().numpy()).sum(
+        axis=0)
     denominator = labels.shape[0]
     return np.append(numerator, denominator)
 
@@ -324,7 +368,8 @@ def accuracy_RMSE_(mu: torch.Tensor, labels: torch.Tensor, relative=False):
         return result
 
 
-def accuracy_ROU_(rou: float, samples: torch.Tensor, labels: torch.Tensor, relative=False):
+def accuracy_ROU_(rou: float, samples: torch.Tensor, labels: torch.Tensor,
+                  relative=False):
     samples = samples.cpu().detach().numpy()
     labels = labels.cpu().detach().numpy()
 
@@ -343,7 +388,8 @@ def accuracy_ROU_(rou: float, samples: torch.Tensor, labels: torch.Tensor, relat
     abs_diff_2 = abs_diff.copy()
     abs_diff_2[labels >= rou_pred] = 0.
 
-    numerator = 2 * (rou * np.sum(abs_diff_1, axis=1) + (1 - rou) * np.sum(abs_diff_2, axis=1))
+    numerator = 2 * (rou * np.sum(abs_diff_1, axis=1) + (1 - rou) * np.sum(
+        abs_diff_2, axis=1))
     denominator = np.sum(labels, axis=1)
 
     mask2 = (denominator == 0)

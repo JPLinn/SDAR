@@ -1,3 +1,14 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Oct 22 16:17:40 2020
+
+@author: 18096
+"""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import os
 from datetime import datetime, timedelta
 import pandas as pd
@@ -6,7 +17,6 @@ import numpy as np
 import math
 import random
 from tqdm import trange
-import heapq
 
 from io import BytesIO
 from urllib.request import urlopen
@@ -15,11 +25,15 @@ from zipfile import ZipFile
 from math import sqrt
 from pandas import read_csv, DataFrame
 from scipy import stats
+import heapq
+import matplotlib
+
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 
-def prep_data(data, covars, dt='train', name='power', lag=2, sys_size=[44, 40]):
-    # print("train: ", train)
-    x_data = data[name].values  # modify it!!!
+def prep_data(x_data, covars, usage='train', lag=2,
+              sys_size=[44, 40], data_name='Zone1'):
     num_covars = covars.shape[1]
     time_len = x_data.shape[0]
     window_size, stride_size = sys_size
@@ -37,19 +51,20 @@ def prep_data(data, covars, dt='train', name='power', lag=2, sys_size=[44, 40]):
                                           window_start:window_end - j - 1]
         x_input[count, :, lag:lag + num_covars] = \
             covars[window_start:window_end, :]
-        x_input[count, :, lag + num_covars] = \
-            data['power'].values[window_start:window_end]
         # x_input[count, :, -1] = series
         label[count, :] = x_data[window_start:window_end]
         count += 1
-    prefix = os.path.join(save_path, dt + '_')
-    np.save(prefix + 'data_' + data_dir, x_input)
-    np.save(prefix + 'label_' + data_dir, label)
+
+    save_path = os.path.join('data', data_name)
+    prefix = os.path.join(save_path, usage + '_')
+    np.save(prefix + 'data_' + data_name, x_input)
+    np.save(prefix + 'label_' + data_name, label)
 
 
-def gen_covars(raw, ids_covar):
+def gen_covars(raw, ids_covar, fit_len):
     times = raw.index
     covars = np.zeros((times.shape[0], len(ids_covar)))
+    raw_value = raw.values
     count = 0
     for id in ids_covar:
         if id == 13:
@@ -59,7 +74,10 @@ def gen_covars(raw, ids_covar):
             covars[:, count] = times.month
             count = count + 1
         else:
-            covars[:, count] = stats.zscore(raw.values[:, id])
+            mean = raw_value[:fit_len, id].mean()
+            std = raw_value[:fit_len, id].std()
+            covars[:, count] = (raw_value[:, id] - mean)/std
+            # covars[:, count] = raw.values[:, id]
             count = count + 1
     return covars
 
@@ -75,14 +93,15 @@ def cal_fourier_resi(raw, terms):
     fit = fit / 8760 + raw[:8760].mean()
     return raw - fit
 
+
 def cal_fourier_fit_adaptive(source, total_len, num_terms):
     spec = np.fft.fft(source - source.mean())
     fit = np.zeros(total_len)
     t = np.arange(total_len)
-    magSpec = np.power(np.abs(spec),2)
+    magSpec = np.power(np.abs(spec), 2)
     terms = heapq.nlargest(num_terms, range(len(magSpec)), magSpec.__getitem__)
     terms = np.array(terms)
-    terms = terms[terms < source.size/2]
+    terms = terms[terms < source.size / 2]
     for term in terms:
         w = 2 * np.pi * term / source.size
         fit = fit + 2 * (np.real(spec[term]) * np.cos(w * t) -
@@ -91,17 +110,10 @@ def cal_fourier_fit_adaptive(source, total_len, num_terms):
     return fit
 
 
-if __name__ == '__main__':
-    global save_path
-    name = 'Zone1.csv'
-    data_dir = 'Zone1'
-    window_size = 44
-    stride_size = 4
-    num_covars = 7
-    pred_days = 5
-
-    data_path = os.path.join('data', data_dir)
-    csv_path = os.path.join(data_path, name)
+def prepare_data(source='Zone1', format='power', ids_covars=[13, 14],
+                 lag_num=3, sys_size=[44, 4], num_terms=10):
+    data_path = os.path.join('data', source)
+    csv_path = os.path.join(data_path, source + '.csv')
 
     df = pd.read_csv(csv_path, sep=',', index_col=0, parse_dates=True)
     df.fillna(0, inplace=True)
@@ -112,33 +124,34 @@ if __name__ == '__main__':
     df['logistic'] = -np.log(1 / df['power'] - 1)
     df['abssig'] = (2 * df['power'] - 1) / (1 - np.abs(2 * df['power'] - 1))
 
-    fourier_terms = [1, 2, 364, 365, 366, 729, 730, 731]
-    df['fourier_resi'] = np.zeros(df.shape[0])
+    train_start = '2012-04-01 01:00:00'
+    train_end = '2013-08-01 00:00:00'
+    vali_start = '2013-07-27 01:00:00'  # need additional 5 days as given info
+    vali_end = '2013-12-01 00:00:00'
+    test_start = '2013-11-26 01:00:00'
+    test_end = '2014-07-01 00:00:00'
 
-    # df = df[df.index.hour < 8]  # truncate 24 hours to 8 hours
+    fit = cal_fourier_fit_adaptive(
+        df[train_start:train_end]['power'].values, df.shape[0],
+        num_terms=num_terms)
+    df['fourier'] = df['power'] - fit
+    tdf = df[df.index.hour < 8][train_start:test_end]
+    covars = gen_covars(tdf, ids_covars, tdf[train_start:train_end].shape[0])
 
-    ids_covars = [13, 14]
+    train = tdf[train_start:train_end][format].values
+    prep_data(train, covars[:train.size], usage='train',
+              lag=lag_num, sys_size=sys_size)
 
-    ref_months = np.array([31,28,31,30,31,30,31,31,30,31,30,31], dtype='int')
-    ref_months = np.append(ref_months, ref_months)
-    train_start = datetime.strptime('2012-04-01 01:00:00', '%Y-%m-%d %H:%M:%S')
-    train_end = datetime.strptime('2013-04-01 00:00:00', '%Y-%m-%d %H:%M:%S')
-    val_start = train_end - timedelta(hours=pred_days * 24 - 1)  # 24h per day
-    val_end = train_end + timedelta(
-        days=int(np.sum(ref_months[train_end.month-1:train_end.month+2])))
-    for i in range(6):
-        save_path = os.path.join(data_path, 'ts' + str(i))
-        if not os.path.exists(save_path):
-            os.makedirs(save_path)
-        df['fourier_resi'][train_start:val_end] = cal_fourier_resi(
-            df[train_start:val_end]['power'].values, fourier_terms)
-        tdf = df[df.index.hour < 8][train_start:val_end]
-        covars = gen_covars(tdf, ids_covars)
-        prep_data(tdf[train_start:train_end], covars[train_start:train_end], name='fourier_resi', lag=3)
-        prep_data(tdf[val_start:val_end], covars[val_start:val_end], train=False,
-                  name='fourier_resi', lag=3)
-        delta_t = timedelta(days=int(np.sum(ref_months[train_end.month-1])))
-        train_start += delta_t
-        train_end += delta_t
-        val_start = train_end - timedelta(hours=pred_days*24-1)
-        val_end += timedelta(days=int(ref_months[val_end.month-1]))
+    vali = tdf[vali_start:vali_end][format].values
+    prep_data(vali, covars[train.size:][:vali.size],
+              usage='vali', lag=lag_num, sys_size=sys_size)
+
+    test = tdf[test_start:test_end][format].values
+    prep_data(test, covars[-test.size:], usage='test',
+              lag=lag_num, sys_size=sys_size)
+
+
+if __name__ == '__main__':
+    # covars = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 ,13, 14]
+    covars = [4, 5, 8, 9, 10, 13, 14]
+    prepare_data('Zone1', format='power', ids_covars=covars, num_terms=10)

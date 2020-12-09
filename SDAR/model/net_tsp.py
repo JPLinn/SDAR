@@ -165,7 +165,7 @@ def loss_fn(theta: Variable, reci_n: Variable, labels: Variable):
     adj_labels[ind] = labels[ind]
     adj_labels[~ind] = 1 - labels[~ind]
     likelihood = -torch.log(reci_n) + (n-1)*(torch.log(adj_labels)-torch.log(adj_theta))
-    x = -torch.mean(likelihood)
+    x = -torch.sum(likelihood)
     if torch.isnan(x):
         print('likelihood:')
         print(likelihood.cpu().detach().numpy())

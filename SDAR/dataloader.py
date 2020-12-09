@@ -21,6 +21,20 @@ class TrainDataset(Dataset):
     def __getitem__(self, index):
         return (self.data[index,:,:-1],int(self.data[index,0,-1]), self.label[index])
 
+class ValiDataset(Dataset):
+    def __init__(self, data_path, data_name, num_class):
+        self.data = np.load(os.path.join(data_path, f'vali_data_{data_name}.npy'))
+        self.label = np.load(os.path.join(data_path, f'vali_label_{data_name}.npy'))
+        self.vali_len = self.data.shape[0]
+        logger.info(f'vali_len: {self.vali_len}')
+        logger.info(f'building datasets from {data_path}...')
+
+    def __len__(self):
+        return self.vali_len
+
+    def __getitem__(self, index):
+        return (self.data[index,:,:-1],int(self.data[index,0,-1]),self.label[index])
+
 class TestDataset(Dataset):
     def __init__(self, data_path, data_name, num_class):
         self.data = np.load(os.path.join(data_path, f'test_data_{data_name}.npy'))

@@ -28,9 +28,9 @@ class Net(nn.Module):
         '''
         super(Net, self).__init__()
         self.params = params
-        self.embedding = nn.Embedding(params.num_class, params.embedding_dim)
+        # self.embedding = nn.Embedding(params.num_class, params.embedding_dim)
 
-        self.lstm = nn.LSTM(input_size=1 + params.cov_dim + params.embedding_dim,
+        self.lstm = nn.LSTM(input_size=1 + params.cov_dim,
                             hidden_size=params.lstm_hidden_dim,
                             num_layers=params.lstm_layers,
                             bias=True,
@@ -74,9 +74,10 @@ class Net(nn.Module):
             hidden ([lstm_layers, batch_size, lstm_hidden_dim]): LSTM h from time step t
             cell ([lstm_layers, batch_size, lstm_hidden_dim]): LSTM c from time step t
         '''
-        onehot_embed = self.embedding(idx)  # TODO: is it possible to do this only once per window instead of per step?
-        lstm_input = torch.cat((x, onehot_embed), dim=2)
-        output, (hidden, cell) = self.lstm(lstm_input, (hidden, cell))
+        # onehot_embed = self.embedding(idx)
+        # lstm_input = torch.cat((x, onehot_embed), dim=2)
+        # output, (hidden, cell) = self.lstm(lstm_input, (hidden, cell))
+        output, (hidden, cell) = self.lstm(x, (hidden, cell))
         # use h from all three layers to calculate mu and sigma
         hidden_permute = hidden.permute(1, 2, 0).contiguous().view(hidden.shape[1], -1)
 
@@ -234,19 +235,42 @@ def accuracy_CRPS(samples: torch.Tensor, labels: torch.Tensor):
     denominator = labels.shape[0]
     return np.append(numerator, denominator)
 
+def accuracy_myCRPS(samples: torch.Tensor, labels: torch.Tensor):
+    samples_permute = samples.permute(1,2,0)
+    labels_unsq = torch.unsqueeze(labels, dim=2)
+    samples_argu = torch.cat((samples_permute, labels_unsq), dim=2)
+    samples_argu = torch.sort(samples_argu, dim=2).values
+    delta = torch.ones_like(samples_argu)/samples_permute.shape[2]
+    delta[samples_argu == labels_unsq] = 0
+    height = torch.cumsum(delta, dim=2)[:,:,:-1]
+    height2 = height * height
+    height2[samples_argu[:,:,:-1]>=labels_unsq] = \
+        1 + height2[samples_argu[:,:,:-1]>=labels_unsq] - 2*height[samples_argu[:,:,:-1]>=labels_unsq]
+    width = samples_argu[:, :, 1:] - samples_argu[:, :, :-1]
+    crps = torch.sum(height2*width, dim=(0,2))
+    return torch.cat((crps, torch.tensor(labels.shape[0],
+                                         device=labels.device).unsqueeze(dim=0)))
 
 def accuracy_SHA(samples: torch.Tensor):
-    samples = samples.cpu().detach().numpy()
-    q5 = np.percentile(samples, 5, axis=0)
-    q95 = np.percentile(samples, 95, axis=0)
-    sharp90 = (q95 - q5).sum(axis=0)
+    # samples = samples.cpu().detach().numpy()
+    # q5 = np.percentile(samples, 5, axis=0)
+    # q95 = np.percentile(samples, 95, axis=0)
+    # sharp90 = (q95 - q5).sum(axis=0)
+    #
+    # q25 = np.percentile(samples, 25, axis=0)
+    # q75 = np.percentile(samples, 75, axis=0)
+    # sharp50 = (q75 - q25).sum(axis=0)
+    #
+    # return np.append(sharp50, np.append(sharp90, samples.shape[1]))
+    q5 = samples.quantile(0.05, dim=0)
+    q95 = samples.quantile(0.95, dim=0)
+    q25 = samples.quantile(0.25, dim=0)
+    q75 = samples.quantile(0.75, dim=0)
 
-    q25 = np.percentile(samples, 25, axis=0)
-    q75 = np.percentile(samples, 75, axis=0)
-    sharp50 = (q75 - q25).sum(axis=0)
+    sharp50 = torch.sum(q75-q25, dim=0)
+    sharp90 = torch.sum(q95-q5, dim=0)
 
-    return np.append(sharp50, np.append(sharp90, samples.shape[1]))
-
+    return torch.cat((sharp50, sharp90, torch.tensor(samples.shape[1], device=samples.device).unsqueeze(dim=0)))
 
 def accuracy_RC(samples: torch.Tensor, labels: torch.Tensor):
     empi_freq = np.zeros((4, 10))

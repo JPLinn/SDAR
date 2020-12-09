@@ -13,9 +13,9 @@ matplotlib.use('Agg')
 #matplotlib.rcParams['savefig.dpi'] = 300 #Uncomment for higher plot resolutions
 import matplotlib.pyplot as plt
 
-# import model.net_normal as net
+import model.net_normal as net
 # import model.net_beta as net
-import model.net_cauchy as net
+# import model.net_cauchy as net
 
 logger = logging.getLogger('DeepAR.Utils')
 
@@ -165,7 +165,7 @@ def plot_all_epoch(variable, save_name, location='./figures/'):
     plt.close()
 
 
-def init_metrics(sample=True):
+def init_metrics(dev, sample=True):
     metrics = {
         'ND': np.zeros(2),  # numerator, denominator
         'RMSE': np.zeros(5),  # numerator, denominator, time step count
@@ -174,9 +174,9 @@ def init_metrics(sample=True):
     if sample:
         metrics['rou90'] = np.zeros(2)
         metrics['rou50'] = np.zeros(2)
-        metrics['crps'] = np.zeros(5)
+        metrics['crps'] = torch.zeros(5, device=dev)
         metrics['rc'] = np.zeros((4,10))
-        metrics['sharp'] = np.zeros(9)
+        metrics['sharp'] = torch.zeros(9, device=dev)
         # metrics['RH'] = np.empty(shape=(0,4))
     return metrics
 
@@ -198,7 +198,7 @@ def update_metrics(raw_metrics, sample_mu, labels, predict_start, samples=None, 
     if samples is not None:
         raw_metrics['rou90'] = raw_metrics['rou90'] + net.accuracy_ROU(0.9, samples, labels[:, predict_start:], relative=True)
         raw_metrics['rou50'] = raw_metrics['rou50'] + net.accuracy_ROU(0.5, samples, labels[:, predict_start:], relative=True)
-        raw_metrics['crps'] = raw_metrics['crps'] + net.accuracy_CRPS(samples, labels[:, predict_start:])
+        raw_metrics['crps'] = raw_metrics['crps'] + net.accuracy_myCRPS(samples, labels[:, predict_start:])
         raw_metrics['rc'] = raw_metrics['rc'] + net.accuracy_RC(samples, labels[:, predict_start:])
         raw_metrics['sharp'] = raw_metrics['sharp'] + net.accuracy_SHA(samples)
         # raw_metrics['RH'] = np.vstack((raw_metrics['RH'], net.accuracy_RH(samples,labels[:, predict_start:])))

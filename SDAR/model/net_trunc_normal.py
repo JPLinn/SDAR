@@ -52,12 +52,13 @@ class Net(nn.Module):
 
         self.relu = nn.ReLU()
 
-        self.distribution_pre_theta = \
-            nn.Linear(params.lstm_hidden_dim * params.lstm_layers, 1)
-        self.distribution_pre_reci_n = \
-            nn.Linear(params.lstm_hidden_dim * params.lstm_layers, 1)
-        self.distribution_theta = nn.Sigmoid()
-        self.distribution_reci_n = nn.Sigmoid()
+        # self.distribution_prep = nn.Linear(params.lstm_hidden_dim * params.lstm_layers, 1)
+        # self.distribution_pregama = nn.Linear(params.lstm_hidden_dim * params.lstm_layers, 1)
+        # self.distribution_p = nn.Sigmoid()
+        # self.distribution_gama = nn.Softplus()
+        self.distribution_mu = nn.Linear(params.lstm_hidden_dim * params.lstm_layers, 1)
+        self.distribution_pre_sigma = nn.Linear(params.lstm_hidden_dim * params.lstm_layers, 1)
+        self.distribution_sigma = nn.Softplus()
 
     def forward(self, x, idx, hidden, cell):
         '''
@@ -73,25 +74,24 @@ class Net(nn.Module):
             hidden ([lstm_layers, batch_size, lstm_hidden_dim]): LSTM h from time step t
             cell ([lstm_layers, batch_size, lstm_hidden_dim]): LSTM c from time step t
         '''
-        # onehot_embed = self.embedding(idx)  # TODO: is it possible to do this only once per window instead of per step?
+        # onehot_embed = self.embedding(idx)
         # lstm_input = torch.cat((x, onehot_embed), dim=2)
         # output, (hidden, cell) = self.lstm(lstm_input, (hidden, cell))
         output, (hidden, cell) = self.lstm(x, (hidden, cell))
-        while torch.isnan(hidden).sum() != 0:  # detect possible inf values
-            print('nihao')
         # use h from all three layers to calculate mu and sigma
         hidden_permute = hidden.permute(1, 2, 0).contiguous().view(hidden.shape[1], -1)
 
         #### settings of beta distribution
-        pre_theta = self.distribution_pre_theta(hidden_permute)
-        theta = self.distribution_theta(pre_theta)
-        # sigmoid to make sure theta value in [0, 1]
-        pre_reci_n = self.distribution_pre_reci_n(hidden_permute)
-        reci_n = self.distribution_reci_n(pre_reci_n)
-        # sigmoid to make sure reci_n value in [0, 1]
+        # pre_p = self.distribution_prep(hidden_permute)
+        # p = self.distribution_p(pre_p) # sigmoid to make sure p value in [0, 1]
+        # pre_gama = self.distribution_pregama(hidden_permute)
+        # gama = self.distribution_gama(pre_gama)  # softplus to make sure standard deviation is positive
 
+        mu = self.distribution_mu(hidden_permute)
+        pre_sigma = self.distribution_pre_sigma(hidden_permute)
+        sigma = self.distribution_sigma(pre_sigma)
 
-        return torch.squeeze(theta), torch.squeeze(reci_n), hidden, cell
+        return torch.squeeze(mu), torch.squeeze(sigma), hidden, cell
 
     def init_hidden(self, input_size):
         return torch.zeros(self.params.lstm_layers, input_size, self.params.lstm_hidden_dim, device=self.params.device)
@@ -108,20 +108,21 @@ class Net(nn.Module):
                 decoder_hidden = hidden
                 decoder_cell = cell
                 for t in range(self.params.predict_steps):
-                    theta_de, reci_n_de, decoder_hidden, decoder_cell = self(x[self.params.predict_start + t].unsqueeze(0),
+                    mu_de, sigma_de, decoder_hidden, decoder_cell = self(x[self.params.predict_start + t].unsqueeze(0),
                                                                        id_batch, decoder_hidden, decoder_cell)
-                    uniform = torch.distributions.uniform.Uniform(
-                        torch.tensor([0.0], device=self.params.device),
-                        torch.tensor([1.0], device=self.params.device))
-                    pred_cdf = torch.squeeze(uniform.sample([batch_size]))
-                    pred = torch.zeros_like(pred_cdf)
-                    ind = pred_cdf < theta_de
-                    pred[ind] = theta_de[ind] * torch.pow(
-                        pred_cdf[ind]/theta_de[ind], reci_n_de[ind])
-                    pred[~ind] = \
-                        1 - (1 - theta_de[~ind]) * \
-                        torch.pow((1 - pred_cdf[~ind]) / (1 - theta_de[~ind]),
-                                  reci_n_de[~ind])
+                    # gama_de[(p_de * gama_de < 1) & (gama_de < 2)] = 3
+                    normal = torch.distributions.normal.Normal(mu_de, sigma_de)
+                    uniform = torch.distributions.uniform.Uniform(torch.zeros_like(mu_de), torch.ones_like(mu_de))
+                    pred_t = uniform.sample()
+                    phi0 = normal.cdf(torch.tensor(0.0, device=mu_de.device))
+                    phi1 = normal.cdf(torch.tensor(1.0, device=mu_de.device))
+                    pred = np.sqrt(2) * sigma_de * torch.erfinv(2*(pred_t*(phi1 - phi0) + phi0) - 1) + mu_de
+                    # pred = normal.sample()  # not scaled
+                    while torch.isinf(pred).sum() != 0:  # detect possible inf values
+                        ind = torch.isinf(pred)
+                        pred_t = uniform.sample()
+                        pred[ind] = np.sqrt(2)*sigma_de[ind] * \
+                                    torch.erfinv(2*(pred_t[ind]*(phi1[ind]-phi0[ind])+phi0[ind])-1) + mu_de[ind]
                     samples[j, :, t] = pred
                     if t < (self.params.predict_steps - 1):
                         x[self.params.predict_start + t + 1, :, 0] = pred
@@ -133,19 +134,19 @@ class Net(nn.Module):
         else:
             decoder_hidden = hidden
             decoder_cell = cell
-            sample_p = torch.zeros(batch_size, self.params.predict_steps, device=self.params.device)
-            sample_gama = torch.zeros(batch_size, self.params.predict_steps, device=self.params.device)
+            sample_mu = torch.zeros(batch_size, self.params.predict_steps, device=self.params.device)
+            sample_sigma = torch.zeros(batch_size, self.params.predict_steps, device=self.params.device)
             for t in range(self.params.predict_steps):
-                p_de, gama_de, decoder_hidden, decoder_cell = self(x[self.params.predict_start + t].unsqueeze(0),
+                mu_de, sigma_de, decoder_hidden, decoder_cell = self(x[self.params.predict_start + t].unsqueeze(0),
                                                                    id_batch, decoder_hidden, decoder_cell)
-                sample_p[:, t] = p_de
-                sample_gama[:, t] = gama_de
+                sample_mu[:, t] = mu_de
+                sample_sigma[:, t] = sigma_de
                 if t < (self.params.predict_steps - 1):
-                    x[self.params.predict_start + t + 1, :, 0] = p_de
-            return sample_p, sample_gama
+                    x[self.params.predict_start + t + 1, :, 0] = mu_de
+            return sample_mu, sample_sigma
 
 
-def loss_fn(theta: Variable, reci_n: Variable, labels: Variable):
+def loss_fn(mu: Variable, sigma: Variable, labels: Variable):
     '''
     Compute using gaussian the log-likehood which needs to be maximized. Ignore time steps where labels are missing.
     Args:
@@ -155,24 +156,20 @@ def loss_fn(theta: Variable, reci_n: Variable, labels: Variable):
     Returns:
         loss: (Variable) average log-likelihood loss across the batch
     '''
-    # zero_index = (labels != 0)
-    ind = labels < theta
-    n = torch.reciprocal(reci_n)
-    adj_labels = torch.zeros_like(labels)
-    adj_theta = torch.zeros_like(theta)
-    adj_theta[ind] = theta[ind]
-    adj_theta[~ind] = 1 - theta[~ind]
-    adj_labels[ind] = labels[ind]
-    adj_labels[~ind] = 1 - labels[~ind]
-    likelihood = -torch.log(reci_n) + (n-1)*(torch.log(adj_labels)-torch.log(adj_theta))
-    x = -torch.sum(likelihood)
+    zero_index = (labels != 0)
+    distribution = torch.distributions.normal.Normal(mu[zero_index],
+                                                 sigma[zero_index])
+    likelihood = distribution.log_prob(labels[zero_index]) - \
+                 torch.log(1e-10 + distribution.cdf(torch.tensor(1.0,device=mu.device)) -
+                           distribution.cdf(torch.tensor(0,device=mu.device)))
+    x = -torch.mean(likelihood)
     if torch.isnan(x):
         print('likelihood:')
         print(likelihood.cpu().detach().numpy())
-        print('theta:')
-        print(theta.cpu().detach().numpy())
-        print('reci_n:')
-        print(reci_n.cpu().detach().numpy())
+        print('gama:')
+        print(sigma.cpu().detach().numpy())
+        print('p:')
+        print(mu.cpu().detach().numpy())
         print('label:')
         print(labels.cpu().detach().numpy())
     return -torch.mean(likelihood)
@@ -190,24 +187,14 @@ def loss_fn_rou(x0: Variable, gama: Variable, labels: Variable):
     rou_score = (rou75_score + rou25_score + rou50_score) / 3
     return rou_score
 
-def loss_fn_crps(theta: Variable, reci_n: Variable, labels: Variable):
-    n = torch.reciprocal(reci_n)
-    ind = labels < theta
-    const_term = labels - theta
-    const_term[ind] = -const_term[ind]
-    quad_term = (torch.pow(theta, 3) + torch.pow(1-theta, 3))/(2*n+1)
-    adj_labels = torch.zeros_like(labels)
-    adj_theta = torch.zeros_like(theta)
-    adj_theta[~ind] = 1 - theta[~ind]
-    adj_theta[ind] = theta[ind]
-    adj_labels[~ind] = 1 - labels[~ind]
-    adj_labels[ind] = labels[ind]
-    linear_term = 2*(torch.pow(adj_labels, n+1)/(torch.pow(adj_theta + 0.0001, n-1))
-                     - torch.pow(adj_labels, 2))/(n+1)
-    # linear_term = 2*(torch.pow(adj_labels, 2) - torch.pow(adj_labels, 2))/(n+1)
-    crps = const_term + quad_term + linear_term
-    return torch.mean(crps)
-
+def loss_fn_crps(x0: Variable, sigma: Variable, labels: Variable):
+    zeros_index = (labels != 0)
+    norm_labels = (labels - x0)/sigma
+    normal = torch.distributions.normal.Normal(
+        torch.zeros_like(x0), torch.ones_like(sigma))
+    crps = sigma*(norm_labels*(2*normal.cdf(norm_labels)-1) +
+                  2*torch.exp(normal.log_prob(norm_labels))-1/np.sqrt(np.pi))
+    return crps.mean()
 
 
 

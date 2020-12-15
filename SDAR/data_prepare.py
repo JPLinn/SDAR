@@ -33,10 +33,9 @@ import matplotlib.pyplot as plt
 
 
 def prep_data(x_data, covars, usage='train', lag=2,
-              sys_size=[44, 40], data_name='Zone1'):
+              window_size=44, data_name='Zone1'):
     num_covars = covars.shape[1]
     time_len = x_data.shape[0]
-    window_size, stride_size = sys_size
     # input_size = window_size - stride_size
     windows = time_len - window_size + 1
     x_input = np.zeros((windows, window_size, lag + num_covars + 1),
@@ -67,16 +66,17 @@ def gen_covars(raw, ids_covar, fit_len):
     raw_value = raw.values
     count = 0
     for id in ids_covar:
-        if id == 13:
+        if id == -1:
             covars[:, count] = times.hour
             count = count + 1
-        elif id == 14:
+        elif id == 0:
             covars[:, count] = times.month
             count = count + 1
         else:
             mean = raw_value[:fit_len, id].mean()
             std = raw_value[:fit_len, id].std()
             covars[:, count] = (raw_value[:, id] - mean)/std
+
             # covars[:, count] = raw.values[:, id]
             count = count + 1
     return covars
@@ -94,14 +94,21 @@ def cal_fourier_resi(raw, terms):
     return raw - fit
 
 
-def cal_fourier_fit_adaptive(source, total_len, num_terms):
+def cal_fourier_fit_adaptive(raw, terms):
+    source = raw[:8760]
     spec = np.fft.fft(source - source.mean())
-    fit = np.zeros(total_len)
-    t = np.arange(total_len)
-    magSpec = np.power(np.abs(spec), 2)
-    terms = heapq.nlargest(num_terms, range(len(magSpec)), magSpec.__getitem__)
-    terms = np.array(terms)
-    terms = terms[terms < source.size / 2]
+    fit = np.zeros(len(raw))
+    t = np.arange(len(raw))
+    # magSpec = np.power(np.abs(spec), 2)
+    # if isinstance(num_terms, int):
+    #     terms = heapq.nlargest(num_terms, range(len(magSpec)), magSpec.__getitem__)
+    #     terms = np.array(terms)
+    #     terms = terms[terms < source.size / 2]
+    # elif isinstance(num_terms, list):
+    #     for id in num_terms:
+    #         precise = source.size/id
+    #         roun = round(precise)
+    #         terms = terms + [roun-1, roun, roun+1, roun-2 if roun > precise else roun + 2]
     for term in terms:
         w = 2 * np.pi * term / source.size
         fit = fit + 2 * (np.real(spec[term]) * np.cos(w * t) -
@@ -110,8 +117,8 @@ def cal_fourier_fit_adaptive(source, total_len, num_terms):
     return fit
 
 
-def prepare_data(source='Zone1', format='power', ids_covars=[13, 14],
-                 lag_num=3, sys_size=[44, 4], num_terms=10):
+def prepare_data(source='Zone1', format='power', ids_covars=list(range(-1, 13)),
+                 lag_num=3, window_size=[44, 44], terms=[1, 365, 730]):
     data_path = os.path.join('data', source)
     csv_path = os.path.join(data_path, source + '.csv')
 
@@ -131,27 +138,26 @@ def prepare_data(source='Zone1', format='power', ids_covars=[13, 14],
     test_start = '2013-11-26 01:00:00'
     test_end = '2014-07-01 00:00:00'
 
-    fit = cal_fourier_fit_adaptive(
-        df[train_start:train_end]['power'].values, df.shape[0],
-        num_terms=num_terms)
+    fit = cal_fourier_fit_adaptive(df['power'].values, terms=terms)
     df['fourier'] = df['power'] - fit
     tdf = df[df.index.hour < 8][train_start:test_end]
     covars = gen_covars(tdf, ids_covars, tdf[train_start:train_end].shape[0])
 
     train = tdf[train_start:train_end][format].values
     prep_data(train, covars[:train.size], usage='train',
-              lag=lag_num, sys_size=sys_size)
+              lag=lag_num, window_size=window_size[0])
 
     vali = tdf[vali_start:vali_end][format].values
-    prep_data(vali, covars[train.size:][:vali.size],
-              usage='vali', lag=lag_num, sys_size=sys_size)
+    prep_data(vali, covars[train.size-40:][:vali.size],
+              usage='vali', lag=lag_num, window_size=window_size[1])
 
     test = tdf[test_start:test_end][format].values
     prep_data(test, covars[-test.size:], usage='test',
-              lag=lag_num, sys_size=sys_size)
+              lag=lag_num, window_size=window_size[1])
 
 
 if __name__ == '__main__':
-    # covars = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 ,13, 14]
-    covars = [4, 5, 8, 9, 10, 13, 14]
-    prepare_data('Zone1', format='power', ids_covars=covars, num_terms=10)
+    covars = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, -1, 0]
+    # covars = [4, 5, 8, 9, 10, 13, 14]
+    # covars = [13, 14]
+    prepare_data('Zone1', format='power', ids_covars=covars, terms=[1, 2, 364, 365, 366, 729, 730, 731])

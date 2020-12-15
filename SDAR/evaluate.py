@@ -96,7 +96,7 @@ def evaluate(model, loss_fn, test_loader, params, plot_num=5, sample=True):
             summary_metric['RMSE']) + '\nrou90: ' + str(summary_metric['rou90']) + \
                   '\nrou50: ' + str(summary_metric['rou50']) + '\nsharp50: ' + str(
             summary_metric['sharp'][:4]) + '\nsharp90: ' + str(summary_metric['sharp'][4:]) + \
-                  '\nrc: ' + str(summary_metric['rc'][:, -1])
+                           '\nrc: ' + str(summary_metric['rc'][:, -1])
         summary_metric['crps'] = summary_metric['crps'].mean()
         logger.info('- Full test metrics: ' + strings)
     ss_metric = {}
@@ -105,7 +105,8 @@ def evaluate(model, loss_fn, test_loader, params, plot_num=5, sample=True):
     ss_metric['rou50'] = summary_metric['rou50']
     ss_metric['sharp50'] = summary_metric['sharp'][:4].mean()
     ss_metric['sharp90'] = summary_metric['sharp'][4:].mean()
-    ss_metric['rc'] = summary_metric['rc'][:, -1].mean()
+    ss_metric['rc'] = summary_metric['rc'][:, -1].max()
+    # ss_metric['rc'] = summary_metric['rc']
     # ss_metric['test_loss'] = summary_metric['test_loss']
     return ss_metric
 

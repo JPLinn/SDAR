@@ -176,6 +176,7 @@ def init_metrics(dev, sample=True):
         metrics['rou50'] = np.zeros(2)
         metrics['crps'] = torch.zeros(5, device=dev)
         metrics['rc'] = np.zeros((4,10))
+        # metrics['rc'] = np.zeros(2)
         metrics['sharp'] = torch.zeros(9, device=dev)
         # metrics['RH'] = np.empty(shape=(0,4))
     return metrics
@@ -200,6 +201,7 @@ def update_metrics(raw_metrics, sample_mu, labels, predict_start, samples=None, 
         raw_metrics['rou50'] = raw_metrics['rou50'] + net.accuracy_ROU(0.5, samples, labels[:, predict_start:], relative=True)
         raw_metrics['crps'] = raw_metrics['crps'] + net.accuracy_myCRPS(samples, labels[:, predict_start:])
         raw_metrics['rc'] = raw_metrics['rc'] + net.accuracy_RC(samples, labels[:, predict_start:])
+        # raw_metrics['rc'] = raw_metrics['rc'] + net.accuracy_newRC(samples, labels[:, predict_start:])
         raw_metrics['sharp'] = raw_metrics['sharp'] + net.accuracy_SHA(samples)
         # raw_metrics['RH'] = np.vstack((raw_metrics['RH'], net.accuracy_RH(samples,labels[:, predict_start:])))
     return raw_metrics
@@ -215,7 +217,8 @@ def final_metrics(raw_metrics, sampling=False):
         summary_metric['crps'] = raw_metrics['crps'][:-1] / raw_metrics['crps'][-1]
         summary_metric['rc'] = raw_metrics['rc']
         summary_metric['rc'][:,:-1] = (raw_metrics['rc'][:,:-1].T / raw_metrics['rc'][:,-1]).T
-        summary_metric['rc'][:,-1] = np.abs((summary_metric['rc'][:,:-1]-np.arange(0.1,0.99,0.1))).mean(axis=1)
+        summary_metric['rc'][:,-1] = np.abs((summary_metric['rc'][:,:-1]-np.arange(0.1,0.99,0.1))).max(axis=1)
+        # summary_metric['rc'] = raw_metrics['rc'][0]/raw_metrics['rc'][1]
         summary_metric['sharp'] = raw_metrics['sharp'][:-1] / raw_metrics['sharp'][-1]
         # summary_metric['RH'] = raw_metrics['RH']
     return summary_metric

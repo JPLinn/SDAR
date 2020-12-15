@@ -125,8 +125,8 @@ class Net(nn.Module):
                         self(x[self.params.predict_start + t].unsqueeze(0),
                         id_batch, decoder_hidden, decoder_cell)
                     uniform = torch.distributions.uniform.Uniform(
-                        torch.tensor([0.0], device='cuda:0'),
-                        torch.tensor([1.0], device='cuda:0'))
+                        torch.tensor([0.0], device=u_de.device),
+                        torch.tensor([1.0], device=u_de.device))
                     pred_cdf = torch.squeeze(uniform.sample([batch_size]))
                     b = beta_de - torch.nn.functional.pad(
                         beta_de, (1, 0), 'constant', 0)[:, :-1]
@@ -166,7 +166,7 @@ class Net(nn.Module):
         #     return sample_p, sample_gama
 
 
-def loss_fn_crps(u: Variable, beta: Variable, gama: Variable, labels: Variable):
+def loss_fn(u: Variable, beta: Variable, gama: Variable, labels: Variable):
     zero_index = (labels != 0)
     knots = torch.cumsum(u*beta,dim=1).permute(1,0) + gama
     knots = knots[:-1,:]

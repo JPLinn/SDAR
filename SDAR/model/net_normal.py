@@ -288,6 +288,12 @@ def accuracy_RC(samples: torch.Tensor, labels: torch.Tensor):
     return empi_freq
 
 
+def accuracy_newRC(samples: torch.Tensor, labels: torch.Tensor):
+    q = torch.quantile(samples, torch.tensor([0.25, 0.75], device=samples.device), dim=0)
+    ind = q < labels
+    count = torch.sum(ind[0, ] ^ ind[1, ]).item()
+    return [count, labels.numel()]
+
 def accuracy_RH(samples: torch.Tensor, labels: torch.Tensor):
     return (torch.sum(samples < labels, dim=0).cpu().detach().numpy()) // 10 + 1
 

@@ -15,8 +15,10 @@ import utils
 # import model.net_cauchy as net
 # import model.net_lspline as net
 import model.net_tsp as net
+# import model.net_limited_normal as net
 # import model.net_tln as net
 # import model.net_log_normal as net
+# import model.net_trunc_normal as net
 
 from evaluate import evaluate
 from dataloader import *
@@ -221,6 +223,7 @@ def train_and_evaluate(model: nn.Module,
         utils.plot_all_epoch(CRPS_summary, print_params + '_CRPS', location=params.plot_dir)
         utils.plot_all_epoch(loss_summary, print_params + '_loss', location=params.plot_dir)
 
+    return best_test_CRPS[0]
     # stabilityTest(model, loss_fn, test_loader, params, best_test_CRPS[0])
 
 if __name__ == '__main__':
@@ -235,12 +238,13 @@ if __name__ == '__main__':
 
     params.relative_metrics = args.relative_metrics
     params.sampling = args.sampling
-    params.model_dir = model_dir + '4'
+    params.model_dir = model_dir + '0'
     params.plot_dir = os.path.join(params.model_dir, 'figures')
     params.save_model_dir = os.path.join(params.model_dir, 'epochs')
 
-    params.trans = None
+    # params.trans = 'logistic'
     params.spline = False
+    params.trans = None
     # create missing directories
     try:
         os.makedirs(params.plot_dir)
@@ -255,7 +259,7 @@ if __name__ == '__main__':
     cuda_exist = torch.cuda.is_available()
     # Set random seeds for reproducible experiments if necessary
     if cuda_exist:
-        params.device = torch.device('cuda')
+        params.device = torch.device('cuda:1')
         # torch.cuda.manual_seed(240)
         logger.info('Using Cuda...')
         model = net.Net(params).cuda(params.device)
@@ -270,8 +274,10 @@ if __name__ == '__main__':
 
     train_set = TrainDataset(data_dir, args.dataset, params.num_class)
     vali_set = ValiDataset(data_dir, args.dataset, params.num_class)
-    train_loader = DataLoader(train_set, batch_size=params.batch_size, num_workers=0) # modify 4 to 0
-    vali_loader = DataLoader(vali_set, batch_size=params.predict_batch, sampler=RandomSampler(vali_set), num_workers=0) # modify 4 to 0
+    train_loader = DataLoader(train_set, batch_size=params.batch_size, num_workers=8) # modify 4 to 0
+    vali_loader = DataLoader(vali_set, batch_size=params.predict_batch, sampler=RandomSampler(vali_set), num_workers=8) # modify 4 to 0
+    test_set = TestDataset(data_dir, args.dataset, params.num_class)
+    test_loader = DataLoader(test_set, batch_size=params.predict_batch, sampler=RandomSampler(test_set), num_workers=8)
     logger.info('Loading complete.')
 
     logger.info(f'Model: \n{str(model)}')
@@ -282,4 +288,8 @@ if __name__ == '__main__':
 
     # Train the model
     logger.info('Starting training for {} epoch(s)'.format(params.num_epochs))
-    train_and_evaluate(model, train_loader, vali_loader, optimizer, loss_fn, params, args.restore_file)
+    best_epoch = train_and_evaluate(model, train_loader, vali_loader, optimizer, loss_fn, params, args.restore_file)
+
+    load_dir = os.path.join(params.save_model_dir, 'epoch_' + str(best_epoch-1) + '.pth.tar')
+    utils.load_checkpoint(load_dir, model)
+    evaluate(model, loss_fn, test_loader, params)

@@ -10,6 +10,7 @@ from subprocess import check_call
 
 import numpy as np
 import utils
+import data_prepare
 
 import pickle
 import time
@@ -45,6 +46,9 @@ def launch_training_job(search_range):
     model_param = copy(param_template)
     for k, v in params.items():
         setattr(model_param, k, v)
+
+    # if search_params.has_key('train_window'):
+    #     data_prepare.prep_data(args.dataset, format='power', window_size=[])
 
     pool_id, job_idx = multiprocessing.Process()._identity
     gpu_id = gpu_ids[pool_id % 2 ]
@@ -101,9 +105,9 @@ def main():
 
     # Perform hypersearch over parameters listed below
     search_params = {
-        'lstm_dropout': np.arange(0, 0.501, 0.1, dtype=np.float32).tolist(),
-        'lstm_hidden_dim': np.arange(16, 31, 2, dtype=np.int).tolist()
-        # 'num_spline': np.arange(5,66,10,dtype=int).tolist()
+        # 'lstm_dropout': np.arange(0, 0.501, 0.1, dtype=np.float32).tolist(),
+        # 'lstm_hidden_dim': np.arange(36, 45, 4, dtype=np.int).tolist()
+        'num_spline': np.arange(53, 80, 3, dtype=int).tolist()
     }
 
     keys = sorted(search_params.keys())
@@ -116,14 +120,14 @@ def main():
     for i in search_range:
         params = {k: search_params[k][i[idx]] for idx, k in enumerate(sorted(search_params.keys()))}
         model_param_list = '-'.join('_'.join((k, f'{v:.2f}')) for k, v in params.items())
-        model_name = os.path.join(model_dir, model_param_list)
+        model_name = os.path.join(model_dir, args.job_dir, model_param_list)
         json_path = os.path.join(model_name, 'metrics_test_best_weights.json')
         with open(json_path) as f:
             temp = json.load(f)
             results[:, count] = np.array(list(temp.values()))
             count += 1
 
-    save_name = os.path.join(model_dir, '2.1__' + '-'.join(k for k in search_params.keys()))
+    save_name = os.path.join(model_dir, '3.3__' + '-'.join(k for k in search_params.keys()))
     with open(save_name, 'wb') as f:
         pickle.dump(search_params, f)
         pickle.dump(results, f)

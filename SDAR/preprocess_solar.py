@@ -79,6 +79,23 @@ def gen_covariates(raw, num_covariates):
         covariates[:, i] = stats.zscore(covariates[:, i])
     return covariates[:, :num_covariates]
 
+def gen_covariates_right(raw, num_covariates, fit_len):
+    times = raw.index
+    covariates = np.zeros((times.shape[0], num_covariates))
+    for i, input_time in enumerate(times):
+        covariates[i, 0] = input_time.hour
+        covariates[i, 1] = input_time.month
+    covariates[:, 2] = np.array(raw['ssrd'])  # relative humidity at 1000 m (r)
+    # covariates[:, 3] = np.array(raw['cs_ghi'])  # ghi in ideal clear sky (cs_ghi)
+    covariates[:, 3] = np.array(raw['2t'])  # total cloud cover (tcc)
+    covariates[:, 4] = np.array(raw['tcc'])  # temperature at 2 m (2t)
+    covariates[:, 5] = np.array(raw['rh']) # surface solar rad down (ssrd)
+    covariates[:, 6] = np.array(raw['strd']) # surface thermal rad down (strd)
+    for i in range(2, num_covariates):
+        mean = covariates[:fit_len, i].mean()
+        std = covariates[:fit_len, i].std()
+        covariates[:, i] = (covariates[:, i] - mean)/std
+    return covariates[:, :num_covariates]
 
 
 def calResi(df, terms):
@@ -106,9 +123,9 @@ if __name__ == '__main__':
     stride_size = 4
     num_covariates = 7
     train_start = '2012-04-01 01:00:00'
-    train_end = '2013-04-01 00:00:00'
-    test_start = '2013-03-27 01:00:00'  # need additional 5 days as given info
-    test_end = '2013-07-01 00:00:00'
+    train_end = '2013-08-01 00:00:00'
+    test_start = '2013-07-27 01:00:00'  # need additional 5 days as given info
+    test_end = '2013-12-01 00:00:00'
     pred_days = 5
     given_days = 5
     num_series = 1
@@ -138,7 +155,7 @@ if __name__ == '__main__':
 
     data_start = 0  # find first nonzero value in each time series
 
-    covariates = gen_covariates(df[train_start:test_end], num_covariates)
+    covariates = gen_covariates_right(df[train_start:test_end], num_covariates, df[train_start:train_end].shape[0])
     # df['npower'] = df['power']*1000/df['cs_ghi']
     train_data = df[train_start:train_end]
     test_data = df[test_start:test_end]

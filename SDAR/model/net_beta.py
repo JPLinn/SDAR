@@ -54,10 +54,8 @@ class Net(nn.Module):
 
         self.distribution_pre_p = nn.Linear(params.lstm_hidden_dim * params.lstm_layers, 1)
         self.distribution_pre_gama = nn.Linear(params.lstm_hidden_dim * params.lstm_layers, 1)
-        self.distribution_pre_alpha = nn.Linear(params.lstm_hidden_dim * params.lstm_layers, 3)
         self.distribution_p = nn.Sigmoid()
         self.distribution_gama = nn.Softplus()
-        self.distribution_alpha = nn.Softmax()
 
     def forward(self, x, idx, hidden, cell):
         '''
@@ -85,10 +83,8 @@ class Net(nn.Module):
         p = self.distribution_p(pre_p) # sigmoid to make sure p value in [0, 1]
         pre_gama = self.distribution_pre_gama(hidden_permute)
         gama = self.distribution_gama(pre_gama)  # softplus to make sure standard deviation is positive
-        pre_alpha = self.distribution_pre_alpha(hidden_permute)
-        alpha = self.distribution_alpha(pre_alpha)
 
-        return torch.squeeze(p), torch.squeeze(gama), torch.squeeze(alpha), hidden, cell
+        return torch.squeeze(p), torch.squeeze(gama),  hidden, cell
 
     def init_hidden(self, input_size):
         return torch.zeros(self.params.lstm_layers, input_size, self.params.lstm_hidden_dim, device=self.params.device)

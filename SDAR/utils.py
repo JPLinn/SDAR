@@ -9,7 +9,7 @@ import numpy as np
 from tqdm import tqdm
 
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('TKAgg')
 #matplotlib.rcParams['savefig.dpi'] = 300 #Uncomment for higher plot resolutions
 import matplotlib.pyplot as plt
 

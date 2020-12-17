@@ -34,7 +34,7 @@ def transform(samples, labels, trans):
     return samples, labels
 
 
-def evaluate(model, loss_fn, test_loader, params, plot_num=5, sample=True):
+def evaluate(model, loss_fn, test_loader, params, plot_num=5, sample=True, test=False):
     '''Evaluate the model on the test set.
     Args:
         model: (torch.nn.Module) the Deep AR model
@@ -83,6 +83,8 @@ def evaluate(model, loss_fn, test_loader, params, plot_num=5, sample=True):
                 samples, sample_mu, _ = \
                     model.test(test_batch, id_batch, hidden, cell,
                                sampling=True)
+                if test & (i == plot_num):
+                    tsamples = samples.cpu().detach().numpy()
                 if params.trans:
                     samples, labels = transform(samples, labels, params.trans)
                 raw_metrics = \
@@ -108,7 +110,10 @@ def evaluate(model, loss_fn, test_loader, params, plot_num=5, sample=True):
     ss_metric['rc'] = summary_metric['rc'][:, -1].max()
     # ss_metric['rc'] = summary_metric['rc']
     # ss_metric['test_loss'] = summary_metric['test_loss']
-    return ss_metric
+    if test:
+        return tsamples, ss_metric
+    else:
+        return ss_metric
 
 
 def plot_eight_windows(plot_dir,

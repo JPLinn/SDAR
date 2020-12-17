@@ -16,6 +16,7 @@ import utils
 # import model.net_lspline as net
 import model.net_tsp as net
 # import model.net_limited_normal as net
+# import model.net_mg as net
 # import model.net_tln as net
 # import model.net_log_normal as net
 # import model.net_trunc_normal as net
@@ -292,4 +293,5 @@ if __name__ == '__main__':
 
     load_dir = os.path.join(params.save_model_dir, 'epoch_' + str(best_epoch-1) + '.pth.tar')
     utils.load_checkpoint(load_dir, model)
+    results, metrics = evaluate(model, loss_fn, vali_loader, params, plot_num=1, test=True)
     evaluate(model, loss_fn, test_loader, params)
